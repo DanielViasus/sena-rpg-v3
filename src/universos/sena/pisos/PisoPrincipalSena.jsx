@@ -13,7 +13,8 @@ import IndicadorInteraccion from "../../../juego/ui/IndicadorInteraccion.jsx";
 
 // +++ agrega tu icono (ajusta la ruta real)
 import IconoE from "../../../assets/svg/ui/icono/pressE_128x128_400ms.gif";
-import PortalSVG from "../../../assets/svg/objetos/portal/portalSVG.gif";
+import PortalSVG from "../../../assets/svg/objetos/portal/PortalSVG.gif";
+
 
 
 import EscritorioMaestro from "../../../assets/svg/objetos/Escritorios/EscritorioMaestro309x141.svg";
