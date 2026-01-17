@@ -1,16 +1,13 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import AppRutas from "./rutas/AppRutas.jsx";
+import AtajosTecladoJuego from "./juego/sistema/AtajosTecladoJuego.jsx";
+import AtajosInteraccion from "./juego/sistema/AtajosInteraccion.jsx";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
     <>
-    <div className="promise" style={{color:"#588157",background:"#dad7cd",padding:"64px",borderRadius:"16px"}}> ⚒️ ...Waithing fot it ,developing RPG SENA V3  ⚒️</div> 
+      <AtajosTecladoJuego />
+      <AtajosInteraccion />
+      <AppRutas />
     </>
-  )
+  );
 }
-
-export default App
