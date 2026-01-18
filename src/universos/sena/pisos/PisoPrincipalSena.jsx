@@ -3,13 +3,14 @@ import { useEffect, useMemo } from "react";
 import Mundo from "../../../juego/mundo/Mundo.jsx";
 import fondo from "../../../assets/svg/fondos/bgSalonDeClases1491x1609.svg";
 
+
 import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
 import SistemaMoverJugador from "../../../juego/sistema/SistemaMoverJugador.jsx";
 
 import Objeto from "../../../juego/objetos/Objeto.jsx";
 import TrazoRuta from "../../../juego/ui/TrazoRuta.jsx";
 import IndicadorInteraccionIndirecta from "../../../juego/ui/IndicadorInteraccionIndirecta.jsx";
-import IndicadorInteraccion from "../../../juego/ui/IndicadorInteraccion.jsx";
+
 
 // +++ agrega tu icono (ajusta la ruta real)
 import IconoE from "../../../assets/svg/ui/icono/pressE_128x128_400ms.gif";
