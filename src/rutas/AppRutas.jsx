@@ -5,6 +5,7 @@ import NoEncontrado from "../paginas/NoEncontrado.jsx";
 
 import UniversoSena from "../universos/sena/UniversoSena.jsx";
 import PisoPrincipalSena from "../universos/sena/pisos/PisoPrincipalSena.jsx";
+import PisoDosSena from       "../universos/sena/pisos/PisoDosSena.jsx";
 
 export default function AppRutas() {
   return (
@@ -12,14 +13,13 @@ export default function AppRutas() {
       <Route path="/" element={<Inicio />} />
 
       {/* Universo (contenedor padre) */}
-      <Route path="/sena" element={<UniversoSena />}>
-        {/* Piso por defecto del universo */}
+        <Route path="/sena" element={<UniversoSena />}>
         <Route index element={<PisoPrincipalSena />} />
-
-        {/* Pisos futuros:
-        <Route path="piso-2" element={<PisoDosSena />} />
-        */}
+        <Route path="/sena/mundotest" element={<PisoDosSena />} />
       </Route>
+
+      
+      
 
       {/* Alias opcional */}
       <Route path="/inicio" element={<Navigate to="/" replace />} />
