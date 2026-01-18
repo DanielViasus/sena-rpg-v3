@@ -1,5 +1,5 @@
 
-/*
+
 // src/juego/ui/IndicadorInteraccionIndirecta.jsx
 import { useMemo } from "react";
 import { useEstadoJuego } from "../../estado/EstadoJuego.jsx";
@@ -57,18 +57,18 @@ export default function IndicadorInteraccionIndirecta({
     </div>
   );
 }
-*/
+
+/*
 
 // src/game/ui/IndicadorInteraccionIndirecta.jsx
 import React from "react";
 import { useEstadoJuego } from "../../estado/EstadoJuego.jsx";
 
-/**
  * IndicadorInteraccionIndirecta
  * - Dibuja un icono 128x128 (o tam) SOBRE el jugador cuando `mostrar` sea true.
  * - x,y del jugador están ANCLADOS A PIES (centro-bottom).
  * - Importante: NO usar hooks condicionales (evita el error de orden de hooks).
- */
+ 
 export default function IndicadorInteraccionIndirecta({
   mostrar = false,
   imagen = null,
@@ -134,3 +134,4 @@ export default function IndicadorInteraccionIndirecta({
     </div>
   );
 }
+*/

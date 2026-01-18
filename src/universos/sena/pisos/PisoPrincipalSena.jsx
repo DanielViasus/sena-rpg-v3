@@ -164,6 +164,17 @@ export default function PisoPrincipalSena() {
 
 const objetosPresentes = [
   {
+    id:"pared_lateral_derecho_salon_clases",
+    categoria:"Pared",
+    x:1250,
+    y:1609,
+    ancho:250,
+    alto:934,
+    
+    colider:{ ancho: 500, alto: 890, offsetX: 0, offsetY: 0 },
+    mostrarDebug:debug.activo,
+  },
+  {
     id:"pared_frontal_salon_clases",
     categoria:"Pared",
     x:1000/2,
