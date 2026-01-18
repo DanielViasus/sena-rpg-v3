@@ -108,8 +108,8 @@ export default function PisoPrincipalSena() {
 
   // Spawn inicial jugador (centro del mundo)
   useEffect(() => {
-    const xCentro = Math.round(ANCHO_MUNDO / 2);
-    const yCentro = Math.round(LARGO_MUNDO / 2);
+    const xCentro = 1225;
+    const yCentro = 520;
     establecerPosicionJugador(xCentro, yCentro);
     guardarInicioJugador(xCentro, yCentro);
   }, [ANCHO_MUNDO, LARGO_MUNDO, establecerPosicionJugador, guardarInicioJugador]);
@@ -164,7 +164,7 @@ export default function PisoPrincipalSena() {
 
 const objetosPresentes = [
   {
-    id:"pared_lateral_derecho_salon_clases",
+    id:"classroom_right_side_wall",
     categoria:"Pared",
     x:1250,
     y:1609,
