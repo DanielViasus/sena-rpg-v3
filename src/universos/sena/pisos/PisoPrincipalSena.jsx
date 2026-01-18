@@ -1,7 +1,7 @@
 // src/rutas/escenas/sena/pisoPrincipal/PisoPrincipalSena.jsx
 import { useEffect, useMemo } from "react";
 import Mundo from "../../../juego/mundo/Mundo.jsx";
-import fondo from "../../../assets/svg/fondos/bgSalonDeClases1333x1796.svg";
+import fondo from "../../../assets/svg/fondos/bgSalonDeClases1491x1609.svg";
 
 import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
 import SistemaMoverJugador from "../../../juego/sistema/SistemaMoverJugador.jsx";
@@ -13,9 +13,10 @@ import IndicadorInteraccion from "../../../juego/ui/IndicadorInteraccion.jsx";
 
 // +++ agrega tu icono (ajusta la ruta real)
 import IconoE from "../../../assets/svg/ui/icono/pressE_128x128_400ms.gif";
-import PortalSVG from "../../../assets/svg/objetos/portal/PortalSVG.gif";
+import PortalSVG from "../../../assets/svg/objetos/portal/PortalSVG.svg";
 
-
+import AficheLogoSena from "../../../assets/svg/objetos/Decoraciones/Afiche/AficheLogoSena129x162.svg"
+import tableroCorcho from "../../../assets/svg/objetos/Decoraciones/Afiche/CompTableroInformativo209x154.svg"
 
 import EscritorioMaestro from "../../../assets/svg/objetos/Escritorios/EscritorioMaestro309x141.svg";
 import Escritorio1 from "../../../assets/svg/objetos/Escritorios/EscritorioEstudienteDos180x162.svg";
@@ -51,8 +52,8 @@ import {
 } from "../../../juego/navegacion/aestrella.js";
 
 export default function PisoPrincipalSena() {
-  const ANCHO_MUNDO = 1333;
-  const LARGO_MUNDO = 1796;
+  const ANCHO_MUNDO = 1491;
+  const LARGO_MUNDO = 1609;
 
   const spriteJugador = { ancho: 128, alto: 128 };
 
@@ -162,96 +163,140 @@ export default function PisoPrincipalSena() {
 
 const objetosPresentes = [
   {
+    id:"pared_frontal_salon_clases",
+    categoria:"Pared",
+    x:1000/2,
+    y:300,
+    ancho:500,
+    alto:220,
+    
+    colider:{ ancho: 1000, alto: 300, offsetX: 0, offsetY: 0 },
+    mostrarDebug:debug.activo,
+  },
+  {
+    id:"pared_frontal_salon_clases_2",
+    categoria:"Pared",
+    x:1250,
+    y:480,
+    ancho:250,
+    alto:220,
+    
+    colider:{ ancho: 550, alto: 300, offsetX: 0, offsetY: 0 },
+    mostrarDebug:debug.activo,
+  },
+  {
+    id:"logo_sena_salon_clases",
+    categoria:"Decoration",
+    x:172,
+    y:280,
+    ancho:129,
+    alto:162,
+    imagen:AficheLogoSena,
+    colider:{ ancho: 2, alto: 6, offsetX: 0, offsetY: 0 },
+    mostrarDebug:debug.activo,
+  },
+  {
     id:"tablero_salon_clases",
     categoria:"Decoration",
-    x:662,
-    y:206,
+    x:480,
+    y:280,
     ancho:386,
-    alto:151,
+    alto:158,
     imagen:Tablero,
+    colider:{ ancho: 200, alto: 60, offsetX: 0, offsetY: 0 },
+    mostrarDebug:debug.activo,
+  },
+  {
+    id:"tablero_corcho_salon_clases",
+    categoria:"Decoration",
+    x:835,
+    y:280,
+    ancho:209,
+    alto:154,
+    imagen:tableroCorcho,
     colider:{ ancho: 200, alto: 60, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
   {
     id:"escritorio_maestro_salon_clases",
     categoria:"Decoration",
-    x:663,
-    y:512,
+    x:480,
+    y:524,
     ancho:309,
     alto:141,
     imagen:EscritorioMaestro,
-    colider:{ ancho: 200, alto: 90, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 200, alto: 55, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
   {
     id:"escritorio_1_salon_clases",
     categoria:"Decoration",
-    x:218,
-    y:1213,
+    x:233,
+    y:850,
     ancho:180,
     alto:162,
     imagen:Escritorio1,
-    colider:{ ancho: 100, alto: 70, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
 
   {
     id:"escritorio_2_salon_clases",
     categoria:"Decoration",
-    x:663,
-    y:1213,
+    x:519,
+    y:850,
     ancho:180,
     alto:162,
     imagen:Escritorio2,
-    colider:{ ancho: 100, alto: 70, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
 
   {
     id:"escritorio_3_salon_clases",
     categoria:"Decoration",
-    x:1102,
-    y:1213,
+    x:779,
+    y:850,
     ancho:180,
     alto:162,
     imagen:Escritorio3,
-    colider:{ ancho: 100, alto: 70, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
 
   {
     id:"escritorio_4_salon_clases",
     categoria:"Decoration",
-    x:218,
-    y:1536,
+    x:233,
+    y:1100,
     ancho:180,
     alto:162,
     imagen:Escritorio4,
-    colider:{ ancho: 100, alto: 70, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
 
   {
     id:"escritorio_5_salon_clases",
     categoria:"Decoration",
-    x:663,
-    y:1536,
+    x:519,
+    y:1100,
     ancho:180,
     alto:162,
     imagen:Escritorio5,
-    colider:{ ancho: 100, alto: 70, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
 
   {
     id:"escritorio_6_salon_clases",
     categoria:"Decoration",
-    x:1102,
-    y:1536,
+    x:779,
+    y:1100,
     ancho:180,
     alto:162,
     imagen:Escritorio6,
-    colider:{ ancho: 100, alto: 70, offsetX: 0, offsetY: 0 },
+    colider:{ ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
     mostrarDebug:debug.activo,
   },
   
@@ -273,6 +318,7 @@ const objetosPresentes = [
           mostrar={debug.activo}
         />
 
+      
         {/* Marca del click */}
         {marca && (
           <MarcaClick
@@ -296,17 +342,7 @@ const objetosPresentes = [
 
         {/* Estructura de paredes*. INICIO */}
        
-        <Objeto
-          id="pared_frontal_salon_clases"
-          categoria="Pared"
-          x={1333/2}
-          y={255}
-          ancho={1333}
-          alto={255}
-          
-          colider={{ ancho: 1333, alto: 255, offsetX: 0, offsetY: 0 }}
-          mostrarDebug={debug.activo}
-        />
+        
 
         {/* Estructura de ESCRITORIOS*. INICIO */}
 
@@ -330,29 +366,26 @@ const objetosPresentes = [
         
         <Teleport
   id="tp_salida_1"
-  x={662}
-  y={757}
-  ancho={239}
-  alto={363}
+  x={518}
+  y={1400}
+  ancho={255}
+  alto={200}
   tecla="E"
-  rutaDestino="/mundo-nuevo"
+  rutaDestino="/sena/mundotest"
   mostrarDebug={debug.activo}
 
   // ✅ Visual del portal
   portalImagen={PortalSVG}
-  portalAncho={239}
-  portalAlto={363}
+  portalAncho={255}
+  portalAlto={199}
 
   // Collider del portal (si quieres que se seleccione/bloquee algo)
-  portalColider={{ ancho: 120, alto: 150, offsetX: 0, offsetY: 0 }}
+  portalColider={{ ancho: 120, alto: 120, offsetX: 0, offsetY: -100 }}
 
   // Por defecto false; ponlo true si quieres que el portal sea obstáculo
   portalBloqueaMovimiento={false}
 />
       </Mundo>
-
-     
-
       <SistemaMoverJugador />
       <SistemaInteraccionIndirecta/>
     </>
