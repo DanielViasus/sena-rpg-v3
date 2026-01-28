@@ -1,41 +1,81 @@
+import { useEffect, useMemo, useRef } from "react";
 import { useEstadoJuego } from "../../../estado/EstadoJuego.jsx";
-import aspectoDefault from "../../../assets/svg/personajes/jugador/Crock.gif";
 
-
+// ✅ WebP animados (ajusta rutas/nombres a los tuyos)
+import gifIdle from "../../../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
+import gifWalk from "../../../assets/svg/personajes/jugador/gifWalk_128x128_200ms.webp";
 
 const ASPECTOS = {
-  default: aspectoDefault,
+  idle: gifIdle,
+  walk: gifWalk,
 };
 
 export default function Jugador({
   ancho = 128,
   alto = 128,
-  
-
-  mostrarSombra = false,   
-  mostrarDebug,           
+  mostrarSombra = false,
+  mostrarDebug,
 }) {
-
   const { jugador, debug } = useEstadoJuego();
-const { ancho: coliderAncho, alto: coliderAlto, offsetX: coliderOffsetX, offsetY: coliderOffsetY } = jugador.colider;
+
+  const {
+    ancho: coliderAncho,
+    alto: coliderAlto,
+    offsetX: coliderOffsetX,
+    offsetY: coliderOffsetY,
+  } = jugador.colider;
+
+  const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.activo;
+
+  // ✅ ¿Se está moviendo? (si hay ruta activa)
+  const estaMoviendo = (jugador.ruta?.length || 0) > 0;
+
+  // ✅ Idle / Walk
+  const src = estaMoviendo ? ASPECTOS.walk : ASPECTOS.idle;
+
+  // =========================
+  // ✅ Dirección (flip)
+  // =========================
 
 
-const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.activo;
-  const src = ASPECTOS[jugador.aspecto] ?? ASPECTOS.default;
+  // usamos el siguiente waypoint para decidir hacia dónde "va"
+  const objetivoX = jugador.ruta?.[0]?.x ?? null;
 
-  // Collider dentro del sprite (coordenadas internas, relativo al contenedor 128x128)
+  const dirRef = useRef("izquierda");        // o como lo tengas
+  const prevXRef = useRef(jugador.x);
+
+useEffect(() => {
+  if (!estaMoviendo) {
+    prevXRef.current = jugador.x; // resetea referencia al parar
+    return;
+  }
+
+  const dxPos = jugador.x - prevXRef.current;
+  prevXRef.current = jugador.x;
+
+  // ✅ Deadzone: evita flips por 0.1px / snaps
+  const UMBRAL = 1.5; // prueba 0.75, 1, 1.5 según tu movimiento
+  if (Math.abs(dxPos) < UMBRAL) return;
+
+  // ✅ Mantén tu mapeo invertido (según tu sprite)
+  dirRef.current = dxPos < 0 ? "izquierda" : "derecha";
+}, [estaMoviendo, jugador.x]);
+
+
+  const flipX = dirRef.current === "izquierda";
+
+  // =========================
+  // Posicionamiento anclado a pies
+  // =========================
   const coliderLeft = Math.round((ancho - coliderAncho) / 2 + coliderOffsetX);
   const coliderTop = Math.round(alto - coliderAlto + coliderOffsetY);
 
-  // Punto "pies" dentro del sprite = centro inferior del collider
   const piesXLocal = coliderLeft + coliderAncho / 2;
   const piesYLocal = coliderTop + coliderAlto;
 
-  // Como estado.jugador.x/y son "pies" en el mundo, calculamos top-left del sprite:
   const spriteLeft = Math.round(jugador.x - piesXLocal);
   const spriteTop = Math.round(jugador.y - piesYLocal);
 
-  // zIndex desde el centro del collider en Y (independiente de offsets)
   const zIndex = Math.floor(jugador.y - coliderAlto / 2);
 
   return (
@@ -49,25 +89,24 @@ const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.act
         pointerEvents: "none",
         zIndex,
       }}
-      title={`pies x=${jugador.x} y=${jugador.y} z=${zIndex} aspecto=${jugador.aspecto}`}
+      title={`pies x=${jugador.x} y=${jugador.y} z=${zIndex}`}
     >
       {mostrarSombra && (
-  <div
-    style={{
-      position: "absolute",
-      left: piesXLocal,
-      top: piesYLocal,
-      transform: "translate(-50%, -50%)",
-      width: Math.round(ancho * 0.55),
-      height: Math.max(8, Math.round(alto * 0.14)),
-      borderRadius: "50%",
-      background: "rgba(0,0,0,0.35)",
-    }}
-  />
-)}
+        <div
+          style={{
+            position: "absolute",
+            left: piesXLocal,
+            top: piesYLocal,
+            transform: "translate(-50%, -50%)",
+            width: Math.round(ancho * 0.55),
+            height: Math.max(8, Math.round(alto * 0.14)),
+            borderRadius: "50%",
+            background: "rgba(0,0,0,0.35)",
+          }}
+        />
+      )}
 
-
-      {/* Aspecto */}
+      {/* ✅ Sprite (solo este se voltea) */}
       <img
         src={src}
         alt=""
@@ -78,13 +117,19 @@ const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.act
           width: "100%",
           height: "100%",
           objectFit: "contain",
+
+          // ✅ Flip horizontal
+          transform: flipX ? "scaleX(-1)" : "scaleX(1)",
+          transformOrigin: "center",
+
+          // útil para pixel art
+          imageRendering: "pixelated",
         }}
       />
 
       {/* Debug */}
       {debugActivo && (
         <>
-          {/* Caja sprite */}
           <div
             style={{
               position: "absolute",
@@ -93,7 +138,6 @@ const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.act
             }}
           />
 
-          {/* Caja collider */}
           <div
             style={{
               position: "absolute",
@@ -106,7 +150,6 @@ const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.act
             }}
           />
 
-          {/* Punto pies (centro inferior del collider) */}
           <div
             style={{
               position: "absolute",

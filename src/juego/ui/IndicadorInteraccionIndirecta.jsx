@@ -1,3 +1,48 @@
+// src/juego/ui/IndicadorInteraccionIndirecta.jsx
+import { useMemo } from "react";
+import { useEstadoJuego } from "../../estado/EstadoJuego.jsx";
+
+export default function IndicadorInteraccionIndirecta({
+  imagen,
+  tam = 128,
+  altoJugador = 128,
+  offsetX = 0,
+  offsetY = 0,
+  zIndex = 999998,
+}) {
+  const { jugador, interaccionIndirecta } = useEstadoJuego();
+
+  const visible = !!interaccionIndirecta?.activa && !!imagen;
+
+  // ✅ Hook SIEMPRE se ejecuta (no condicional)
+  const estilo = useMemo(() => {
+    // jugador.x/y son PIES
+    const left = Math.round(jugador.x - tam / 2 + offsetX);
+    const top = Math.round(jugador.y - altoJugador - tam + offsetY);
+
+    return {
+      position: "absolute",
+      left,
+      top,
+      width: tam,
+      height: tam,
+      pointerEvents: "none",
+      zIndex,
+      // opcional si quieres look pixel perfect:
+      imageRendering: "pixelated",
+    };
+  }, [jugador.x, jugador.y, tam, altoJugador, offsetX, offsetY, zIndex]);
+
+  // ✅ Return condicional DESPUÉS de los hooks
+  if (!visible) return null;
+
+  return <img src={imagen} alt="" draggable={false} style={estilo} />;
+}
+
+
+
+/*
+
 
 
 // src/juego/ui/IndicadorInteraccionIndirecta.jsx
@@ -58,7 +103,8 @@ export default function IndicadorInteraccionIndirecta({
   );
 }
 
-/*
+
+---------------------------------------------------
 
 // src/game/ui/IndicadorInteraccionIndirecta.jsx
 import React from "react";

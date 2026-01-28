@@ -19,7 +19,7 @@ export default function Teleport({
   y,
 
   // Zona de interacción (rect)
-  ancho,
+  ancho,   
   alto,
 
   // Tecla y destino
