@@ -30,6 +30,12 @@ const ESTADO_INICIAL_BASE = {
     velocidad: 250,
     ruta: [],
     colider: { ancho: 64, alto: 32, offsetX: 0, offsetY: 0 },
+    vidas: 3,
+    escudos: 1,
+  },
+
+  enemigos: {
+    // [idEnemigo]: { derrotado: true }
   },
   navegacion: {
     tamCelda: 14,
@@ -49,6 +55,8 @@ const ESTADO_INICIAL_BASE = {
   ui: {
     plantillaActiva: null, // { id: string, props?: any, origenZonaId?: string }
   },
+
+  
 };
 
 function inicializarEstado() {
@@ -65,6 +73,59 @@ function inicializarEstado() {
 
 function reducer(estado, accion) {
   switch (accion.type) {
+
+// ✅ Jugador: daño (pierde primero escudo, si no vida)
+case "JUGADOR_RECIBIR_DANIO": {
+  const puntos = Math.max(1, Number(accion.payload?.puntos ?? 1));
+
+  let vidas = Number(estado.jugador.vidas ?? 0);
+  let escudos = Number(estado.jugador.escudos ?? 0);
+
+  for (let i = 0; i < puntos; i++) {
+    if (escudos > 0) escudos -= 1;
+    else if (vidas > 0) vidas -= 1;
+  }
+
+  if (vidas === estado.jugador.vidas && escudos === estado.jugador.escudos) return estado;
+
+  return {
+    ...estado,
+    jugador: { ...estado.jugador, vidas, escudos },
+  };
+}
+
+case "JUGADOR_SET_VIDAS": {
+  const vidas = Math.max(0, Math.floor(Number(accion.payload)));
+  if (vidas === estado.jugador.vidas) return estado;
+  return { ...estado, jugador: { ...estado.jugador, vidas } };
+}
+
+case "JUGADOR_SET_ESCUDOS": {
+  const escudos = Math.max(0, Math.floor(Number(accion.payload)));
+  if (escudos === estado.jugador.escudos) return estado;
+  return { ...estado, jugador: { ...estado.jugador, escudos } };
+}
+
+// ✅ Enemigos: marcar derrotado
+case "ENEMIGO_DERROTAR": {
+  const id = String(accion.payload?.id || "");
+  if (!id) return estado;
+
+  const prev = estado.enemigos?.[id];
+  if (prev?.derrotado) return estado;
+
+  return {
+    ...estado,
+    enemigos: {
+      ...(estado.enemigos || {}),
+      [id]: { ...(prev || {}), derrotado: true },
+    },
+  };
+}
+
+
+
+
     // ✅ Plantillas (overlay)
     case "UI_PLANTILLA_ABRIR": {
       const payload = accion.payload || null;
@@ -209,6 +270,25 @@ function reducer(estado, accion) {
 export function ProveedorEstadoJuego({ children }) {
   const [estado, dispatch] = useReducer(reducer, null, inicializarEstado);
 
+
+const jugadorRecibirDanio = useCallback((puntos = 1) => {
+  dispatch({ type: "JUGADOR_RECIBIR_DANIO", payload: { puntos } });
+}, []);
+
+const setVidasJugador = useCallback((vidas) => {
+  dispatch({ type: "JUGADOR_SET_VIDAS", payload: vidas });
+}, []);
+
+const setEscudosJugador = useCallback((escudos) => {
+  dispatch({ type: "JUGADOR_SET_ESCUDOS", payload: escudos });
+}, []);
+
+const derrotarEnemigo = useCallback((id) => {
+  if (!id) return;
+  dispatch({ type: "ENEMIGO_DERROTAR", payload: { id } });
+}, []);
+
+
   // ✅ Plantillas
   const abrirPlantilla = useCallback(({ id, props = {}, origenZonaId = null } = {}) => {
     if (!id) return;
@@ -275,6 +355,13 @@ export function ProveedorEstadoJuego({ children }) {
 
   const acciones = useMemo(
     () => ({
+
+jugadorRecibirDanio,
+setVidasJugador,
+setEscudosJugador,
+derrotarEnemigo,
+
+
       // ✅ Plantillas
       abrirPlantilla,
       cerrarPlantilla,

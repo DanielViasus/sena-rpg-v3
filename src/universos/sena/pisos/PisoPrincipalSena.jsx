@@ -3,6 +3,11 @@ import { useEffect, useMemo } from "react";
 import Mundo from "../../../juego/mundo/Mundo.jsx";
 import fondo from "../../../assets/svg/fondos/bgSalonDeClases1491x1609.svg";
 
+
+import Rival from "../../../juego/personajes/rival/Rival.jsx";
+import rivalImg from "../../../assets/gif/personajes/gifIsaias_128x128_230ms.webp";
+
+
 import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
 import SistemaMoverJugador from "../../../juego/sistema/SistemaMoverJugador.jsx";
 
@@ -24,6 +29,8 @@ import Escritorio4 from "../../../assets/svg/objetos/Escritorios/EscritorioEstud
 import Escritorio5 from "../../../assets/svg/objetos/Escritorios/EscritorioEstudienteCero180x162.svg";
 import Escritorio6 from "../../../assets/svg/objetos/Escritorios/EscritorioEstudienteUno180x162.svg";
 import Tablero from "../../../assets/svg/objetos/Escritorios/Tablero186x158.svg";
+
+import GifIsaias from "../../../assets/gif/personajes/gifIsaias_128x128_230ms.webp";
 
 import MarcaClick from "../../../juego/ui/MarcaClick.jsx";
 import { useMarcaClick } from "../../../juego/sistema/useMarcaClick.jsx";
@@ -352,20 +359,52 @@ export default function PisoPrincipalSena() {
         {/* ✅ Personaje tutorial */}
         <PersonajeTutorial
           id="npc_tutorial_maestro_1"
-          x={650}
-          y={540}
-          ancho={180}
-          alto={160}
+          x={480}
+          y={410}
+          ancho={400}
+          alto={300}
           tecla="E"
           mostrarDebug={debug.activo}
-          plantillaId="TUTO_MOVIMIENTO"
-          // ✅ ya NO va inline
-          plantillaProps={plantillaTutorialMovimiento}
-          npcImagen={AficheLogoSena}
-          npcAncho={90}
-          npcAlto={120}
+          
+          
+          npcImagen={GifIsaias}
+          npcAncho={128}
+          npcAlto={128}
           npcBloqueaMovimiento={false}
+          desviacionZonaX={0}
+          desviacionZonaY={140}
+          plantillaId="DIALOGO"
+          plantillaProps={{
+            dialogoId: "Isaias",
+            secuenciaId: "aperturaPortal",
+            tecla: "E",
+          }}
         />
+
+        <Rival
+  id="RIVAL_ISAIAS"
+  x={820}
+  y={930}
+  imagen={rivalImg}
+  tipoInteraccion="directa"
+  tecla="E"
+  zonaAncho={90}
+  zonaAlto={70}
+  zonaOffsetY={-8}
+  margenZona={6}
+  plantillaCombateId="COMBATE_RIVAL"
+  combateProps={{ rivalNombre: "Isaías" }}
+  npcBloqueaMovimiento={false} 
+  // patrulla
+  areaMovimientoAncho={160}
+  areaMovimientoAlto={90}
+  areaMovimientoOffsetX={0}
+  areaMovimientoOffsetY={0}
+  velocidadPatrulla={45}
+  // si quieres que bloquee el paso del jugador:
+  // bloqueaMovimiento={true}
+  mostrarDebug={debug.activo}
+/>
 
         <Teleport
           id="tp_salida_1"

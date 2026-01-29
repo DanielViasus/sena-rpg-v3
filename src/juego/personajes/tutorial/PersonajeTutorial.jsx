@@ -12,6 +12,10 @@ import Objeto from "../../objetos/Objeto.jsx";
  *
  * ✅ Importante: usa refs para plantillaProps/plantillaId para evitar bucles de render
  * (Maximum update depth exceeded) cuando el padre pasa objetos inline.
+ *
+ * ✅ NUEVO:
+ * - desviacionZonaX / desviacionZonaY desplazan la zona final (rectRegistro)
+ *   sin cambiar ancho/alto ni alterar la posición del NPC.
  */
 export default function PersonajeTutorial({
   // ID de la zona (obligatorio)
@@ -35,10 +39,15 @@ export default function PersonajeTutorial({
   // Debug
   mostrarDebug = false,
 
-  // Ajustes zona interacción
+  // Ajustes zona interacción (ancla)
   offsetX = 0,
   offsetY = 0,
   margenZona = 0,
+
+  // ✅ NUEVO: Desviación extra del área de interacción (NO cambia tamaño)
+  // Ej: desviacionZonaY = -10 => sube 10px la zona
+  desviacionZonaX = 0,
+  desviacionZonaY = 0,
 
   /**
    * ✅ Visual del NPC (Objeto Decoration)
@@ -52,7 +61,7 @@ export default function PersonajeTutorial({
   npcBloqueaMovimiento = false,
 }) {
   const { upsertCollider, removeCollider } = useAccionesRegistroColisiones();
-  const { abrirPlantilla } = useAccionesJuego(); // ✅ Debe existir en tu EstadoJuego
+  const { abrirPlantilla } = useAccionesJuego();
 
   // ====== Refs para evitar closures inestables (y loops de update) ======
   const plantillaIdRef = useRef(plantillaId);
@@ -78,7 +87,7 @@ export default function PersonajeTutorial({
     });
   }, [abrirPlantilla, id]);
 
-  // ====== Zona anclada a PIES (centro-bottom) ======
+  // ====== Zona base anclada a PIES (centro-bottom) ======
   const rectBase = useMemo(() => {
     const anclaX = Math.round(x + (offsetX ?? 0));
     const anclaY = Math.round(y + (offsetY ?? 0));
@@ -94,15 +103,20 @@ export default function PersonajeTutorial({
     };
   }, [x, y, ancho, alto, offsetX, offsetY]);
 
+  // ====== Zona final registrada (con margen + desviación) ======
   const rectRegistro = useMemo(() => {
     const m = Math.max(0, margenZona || 0);
+
+    const dx = Math.round(desviacionZonaX || 0);
+    const dy = Math.round(desviacionZonaY || 0);
+
     return {
-      x: rectBase.x - m,
-      y: rectBase.y - m,
+      x: rectBase.x - m + dx,
+      y: rectBase.y - m + dy,
       ancho: rectBase.ancho + m * 2,
       alto: rectBase.alto + m * 2,
     };
-  }, [rectBase, margenZona]);
+  }, [rectBase, margenZona, desviacionZonaX, desviacionZonaY]);
 
   // ====== Registrar zona de interacción indirecta ======
   useEffect(() => {
@@ -141,7 +155,7 @@ export default function PersonajeTutorial({
   // ====== NPC visual ======
   const nid = useMemo(() => {
     const base = npcId || `${id}__npc`;
-    return base === id ? `${id}__npc` : base; // evita pisar el id de la zona
+    return base === id ? `${id}__npc` : base;
   }, [npcId, id]);
 
   const npcW = Number(npcAncho);
