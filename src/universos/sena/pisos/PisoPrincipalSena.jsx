@@ -5,7 +5,8 @@ import fondo from "../../../assets/svg/fondos/bgSalonDeClases1491x1609.svg";
 
 
 import Rival from "../../../juego/personajes/rival/Rival.jsx";
-import rivalImg from "../../../assets/gif/personajes/gifIsaias_128x128_230ms.webp";
+import rivalCalavera from "../../../assets/gif/personajes/rivales/gifRival_128x128_180ms.webp";
+import rivalCalaveraDerrorada from "../../../assets/gif/personajes/rivales/derrotaRival4.svg";
 
 
 import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
@@ -381,30 +382,50 @@ export default function PisoPrincipalSena() {
           }}
         />
 
-        <Rival
-  id="RIVAL_ISAIAS"
+<Rival
+  id="RIVAL_DIRECTO_1"
   x={820}
-  y={930}
-  imagen={rivalImg}
-  tipoInteraccion="directa"
-  tecla="E"
-  zonaAncho={90}
-  zonaAlto={70}
-  zonaOffsetY={-8}
-  margenZona={6}
-  plantillaCombateId="COMBATE_RIVAL"
-  combateProps={{ rivalNombre: "Isaías" }}
-  npcBloqueaMovimiento={false} 
-  // patrulla
-  areaMovimientoAncho={160}
-  areaMovimientoAlto={90}
-  areaMovimientoOffsetX={0}
-  areaMovimientoOffsetY={0}
-  velocidadPatrulla={45}
-  // si quieres que bloquee el paso del jugador:
-  // bloqueaMovimiento={true}
+  y={1330}
+  imagen={rivalCalavera}
+  imagenDerrotado={rivalCalaveraDerrorada}
+  usarIndirecta={false}
+  usarDirecta={true}   // ✅ ahora es explícita
+  dirAncho={150}
+  dirAlto={150}
+  dirMargen={50}
+  combatePlantillaId="COMBATE_RIVAL"
+  combateProps={{ rivalNombre: "calaveraDirecta" }}
+  patrullaActiva={true}
+  patrullaAncho={160}
+  patrullaAlto={120}
+  patrullaVelocidad={45}
   mostrarDebug={debug.activo}
 />
+
+<Rival
+  id="RIVAL_E_1"
+  x={220}
+  y={1530}
+  imagen={rivalCalavera}
+  imagenDerrotado={rivalCalaveraDerrorada}
+  usarIndirecta={true}
+  tecla="E"
+  indAncho={190}
+  indAlto={220}
+  indMargen={8}
+  combatePlantillaId="COMBATE_RIVAL"
+  combateProps={{ rivalNombre: "calaveraE" }}
+  patrullaActiva={true}
+  patrullaAncho={160}
+  patrullaAlto={290}
+  patrullaVelocidad={85}
+  // patrullaSoloHorizontal={true} // (opcional) si quieres solo X
+  mostrarDebug={debug.activo}
+/>
+
+
+
+
 
         <Teleport
           id="tp_salida_1"
