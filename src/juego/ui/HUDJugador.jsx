@@ -11,7 +11,7 @@ import corazonMitad from "../../assets/ui/corazones/CorazonMitad.svg";
 import corazonVacio from "../../assets/ui/corazones/CorazonVacio.svg";
 
 // 👇 escudo (mismo tamaño que corazón)
-import escudoImg from "../../assets/ui/escudos/Escudo.svg";
+import escudoImg from "../../assets/ui/escudos/Escudos.svg";
 
 
 
