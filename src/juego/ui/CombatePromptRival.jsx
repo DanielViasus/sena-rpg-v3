@@ -17,7 +17,7 @@ export default function CombatePromptRival() {
   const texto = props.texto ?? "¿Qué quieres hacer?";
   const danioPerder = Number.isFinite(props.danioPerder) ? props.danioPerder : 1;
 
-  const vidas = estado.jugador.vidas ?? 0;
+  const vidas = estado.jugador.vida ?? 0;
   const escudos = estado.jugador.escudos ?? 0;
 
   const puedeMarcarDerrota = !!origenZonaId;

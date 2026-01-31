@@ -417,14 +417,14 @@ export default function Rival({
       {renderNpc && (
         <Objeto
           id={nid}
-          categoria="Rival"
+          categoria="Decoration"
           x={pos.x}
           y={pos.y}
           ancho={npcW}
           alto={npcH}
           imagen={src}
           colider={npcColider}
-          bloqueaMovimiento={derrotado ? false : !!npcBloqueaMovimiento}
+          bloqueaMovimiento={false}//bloqueaMovimiento={derrotado ? false : !!npcBloqueaMovimiento}
           mostrarDebug={debugActivo}
         />
       )}

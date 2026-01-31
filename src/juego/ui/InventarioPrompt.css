@@ -1,0 +1,62 @@
+.invOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(0, 0, 0, 0.55);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: auto;
+}
+
+
+
+.invCerrar {
+  height: 74px;
+  width: 74px;
+  position: absolute;
+  top: 200px;
+  right: 530px;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 20;
+  border: none;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+
+
+/* ✅ 816x488 y adaptable si la pantalla es más pequeña */
+.invContenedor {
+  width: 816px;
+  height: 488px;
+  max-width: 92vw;
+  max-height: 80vh;
+  aspect-ratio: 816 / 488;
+  overflow: hidden;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+
+ 
+  position: relative;
+  
+}
+
+/* Debug opcional (lo quitas después) */
+.invDebug {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+
+  padding: 10px;
+  border-radius: 10px;
+
+  
+
+  font-size: 12px;
+  line-height: 1.3;
+}
