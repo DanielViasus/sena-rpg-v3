@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useEstadoJuego } from "../../estado/EstadoJuego.jsx";
+import { useEstadoJuego, useAccionesJuego } from "../../estado/EstadoJuego.jsx";
 import "./HUDJugador.css";
 
 import skin from "../../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
@@ -12,6 +12,8 @@ import corazonVacio from "../../assets/ui/corazones/CorazonVacio.svg";
 
 // 👇 escudo (mismo tamaño que corazón)
 import escudoImg from "../../assets/ui/escudos/Escudo.svg";
+
+
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -92,8 +94,7 @@ export default function HUDJugador() {
         </div>
 
         <div className="infoCol">
-          <p className="pixel-ui nombre">{datos.nombre}</p>
-
+          <p className="pixel-ui nombre">{estado.jugador.nombre}</p>
           <div className="filaIconos">
             {corazones.map((c, idx) => (
               <img

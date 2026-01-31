@@ -2,10 +2,6 @@ import React, { createContext, useCallback, useContext, useMemo, useReducer } fr
 
 /**
  * Estado global del juego
- * - jugador.x,y ANCLADOS A PIES
- * - navegacion.paddingX/paddingY se recalculan desde colider + margenEsquinas
- * - interaccionIndirecta: estado UI para zonas indirectas (icono, tecla, zona activa)
- * - ui.plantillaActiva: controla qué plantilla (overlay) está abierta
  */
 
 const EstadoJuegoContext = createContext(null);
@@ -33,22 +29,19 @@ const ESTADO_INICIAL_BASE = {
     ruta: [],
     colider: { ancho: 64, alto: 32, offsetX: 0, offsetY: 0 },
 
-    // ✅ CONSISTENTE: vida (singular)
-    vida: 6,
-    escudos: 1, // ✅ escudos "de combate" (número)
+    vida: 2,
+    escudos: 1,
 
-    // ✅ Inventario del jugador (lo que pediste)
     inventario: {
-      superPosion: 1,
+      superPosion: 3,
       posion: 2,
       monedas: 6,
-      escudos: ["basico", "logoSENA"], // ✅ tipos de escudos (array)
+      escudos: ["basico"],
+      
     },
   },
 
-  enemigos: {
-    // [idEnemigo]: { derrotado: true }
-  },
+  enemigos: {},
 
   navegacion: {
     tamCelda: 14,
@@ -65,9 +58,11 @@ const ESTADO_INICIAL_BASE = {
     zonaId: null,
   },
 
-  // ✅ UI de plantillas (overlay)
   ui: {
-    plantillaActiva: null, // { id: string, props?: any, origenZonaId?: string }
+    plantillaActiva: null,
+    inventario: {
+      seleccionadoId: null, // ✅ NUEVO
+    },
   },
 };
 
@@ -85,7 +80,30 @@ function inicializarEstado() {
 
 function reducer(estado, accion) {
   switch (accion.type) {
-    // ✅ Jugador: daño (pierde primero escudo, si no vida)
+
+    // ======================
+// ENEMIGOS
+// ======================
+case "ENEMIGO_DERROTAR": {
+  const id = String(accion.payload?.id || "");
+  if (!id) return estado;
+
+  const prev = estado.enemigos?.[id];
+  if (prev?.derrotado) return estado;
+
+  return {
+    ...estado,
+    enemigos: {
+      ...(estado.enemigos || {}),
+      [id]: { ...(prev || {}), derrotado: true },
+    },
+  };
+}
+
+
+    // ======================
+    // VIDA / ESCUDOS COMBATE
+    // ======================
     case "JUGADOR_RECIBIR_DANIO": {
       const puntos = Math.max(1, Number(accion.payload?.puntos ?? 1));
 
@@ -99,10 +117,7 @@ function reducer(estado, accion) {
 
       if (vida === estado.jugador.vida && escudos === estado.jugador.escudos) return estado;
 
-      return {
-        ...estado,
-        jugador: { ...estado.jugador, vida, escudos },
-      };
+      return { ...estado, jugador: { ...estado.jugador, vida, escudos } };
     }
 
     case "JUGADOR_SET_VIDA": {
@@ -117,7 +132,9 @@ function reducer(estado, accion) {
       return { ...estado, jugador: { ...estado.jugador, escudos } };
     }
 
-    // ✅ Inventario: set de items numéricos (superPosion/posion/monedas)
+    // ======================
+    // INVENTARIO (NUMÉRICOS)
+    // ======================
     case "JUGADOR_INVENTARIO_SET_ITEM": {
       const key = String(accion.payload?.key ?? "");
       const value = Math.max(0, Math.floor(Number(accion.payload?.value ?? 0)));
@@ -125,19 +142,14 @@ function reducer(estado, accion) {
 
       const invPrev = estado.jugador.inventario || {};
       const prevValue = Number(invPrev[key] ?? 0);
-
       if (prevValue === value) return estado;
 
       return {
         ...estado,
-        jugador: {
-          ...estado.jugador,
-          inventario: { ...invPrev, [key]: value },
-        },
+        jugador: { ...estado.jugador, inventario: { ...invPrev, [key]: value } },
       };
     }
 
-    // ✅ Inventario: sumar/restar items numéricos
     case "JUGADOR_INVENTARIO_ADD_ITEM": {
       const key = String(accion.payload?.key ?? "");
       const delta = Math.floor(Number(accion.payload?.delta ?? 0));
@@ -151,43 +163,33 @@ function reducer(estado, accion) {
 
       return {
         ...estado,
-        jugador: {
-          ...estado.jugador,
-          inventario: { ...invPrev, [key]: nextValue },
-        },
+        jugador: { ...estado.jugador, inventario: { ...invPrev, [key]: nextValue } },
       };
     }
 
-    // ✅ Inventario: agregar un escudo tipo (array)
+    // ======================
+    // INVENTARIO (ESCUDOS ARRAY)
+    // ======================
     case "JUGADOR_INVENTARIO_ADD_ESCUDO_TIPO": {
       const tipo = String(accion.payload?.tipo ?? "").trim();
       if (!tipo) return estado;
 
       const invPrev = estado.jugador.inventario || {};
       const arrPrev = Array.isArray(invPrev.escudos) ? invPrev.escudos : [];
-
-      // Permite duplicados si quieres stackear; por ahora evitamos duplicados:
       if (arrPrev.includes(tipo)) return estado;
-
-      const nextArr = [...arrPrev, tipo];
 
       return {
         ...estado,
-        jugador: {
-          ...estado.jugador,
-          inventario: { ...invPrev, escudos: nextArr },
-        },
+        jugador: { ...estado.jugador, inventario: { ...invPrev, escudos: [...arrPrev, tipo] } },
       };
     }
 
-    // ✅ Inventario: quitar un escudo tipo (array)
     case "JUGADOR_INVENTARIO_REMOVE_ESCUDO_TIPO": {
       const tipo = String(accion.payload?.tipo ?? "").trim();
       if (!tipo) return estado;
 
       const invPrev = estado.jugador.inventario || {};
       const arrPrev = Array.isArray(invPrev.escudos) ? invPrev.escudos : [];
-
       if (!arrPrev.length) return estado;
 
       const nextArr = arrPrev.filter((t) => t !== tipo);
@@ -195,50 +197,24 @@ function reducer(estado, accion) {
 
       return {
         ...estado,
-        jugador: {
-          ...estado.jugador,
-          inventario: { ...invPrev, escudos: nextArr },
-        },
+        jugador: { ...estado.jugador, inventario: { ...invPrev, escudos: nextArr } },
       };
     }
 
-    // ✅ Enemigos: marcar derrotado
-    case "ENEMIGO_DERROTAR": {
-      const id = String(accion.payload?.id || "");
-      if (!id) return estado;
-
-      const prev = estado.enemigos?.[id];
-      if (prev?.derrotado) return estado;
-
-      return {
-        ...estado,
-        enemigos: {
-          ...(estado.enemigos || {}),
-          [id]: { ...(prev || {}), derrotado: true },
-        },
-      };
-    }
-
-    // ✅ Plantillas (overlay)
+    // ======================
+    // UI: PLANTILLAS
+    // ======================
     case "UI_PLANTILLA_ABRIR": {
       const payload = accion.payload || null;
 
       const next = payload
-        ? {
-            id: String(payload.id),
-            props: payload.props ?? {},
-            origenZonaId: payload.origenZonaId ?? null,
-          }
+        ? { id: String(payload.id), props: payload.props ?? {}, origenZonaId: payload.origenZonaId ?? null }
         : null;
 
       const prev = estado.ui?.plantillaActiva ?? null;
 
-      if (
-        (!prev && !next) ||
-        (prev && next && prev.id === next.id && prev.origenZonaId === next.origenZonaId)
-      ) {
-        return estado;
-      }
+      if (!prev && !next) return estado;
+      if (prev && next && prev.id === next.id && prev.origenZonaId === next.origenZonaId) return estado;
 
       return { ...estado, ui: { ...(estado.ui || {}), plantillaActiva: next } };
     }
@@ -248,7 +224,41 @@ function reducer(estado, accion) {
       return { ...estado, ui: { ...(estado.ui || {}), plantillaActiva: null } };
     }
 
-    // Jugador
+    // ======================
+    // UI: INVENTARIO SELECCIÓN
+    // ======================
+    case "UI_INVENTARIO_SELECCIONAR": {
+      const id = String(accion.payload?.id ?? "");
+      if (!id) return estado;
+
+      const prev = estado.ui?.inventario?.seleccionadoId ?? null;
+      if (prev === id) return estado;
+
+      return {
+        ...estado,
+        ui: {
+          ...(estado.ui || {}),
+          inventario: { ...(estado.ui?.inventario || {}), seleccionadoId: id },
+        },
+      };
+    }
+
+    case "UI_INVENTARIO_DESELECCIONAR": {
+      const prev = estado.ui?.inventario?.seleccionadoId ?? null;
+      if (!prev) return estado;
+
+      return {
+        ...estado,
+        ui: {
+          ...(estado.ui || {}),
+          inventario: { ...(estado.ui?.inventario || {}), seleccionadoId: null },
+        },
+      };
+    }
+
+    // ======================
+    // RESTO (POS, RUTA, ETC.)
+    // ======================
     case "JUGADOR_POS": {
       const { x, y } = accion.payload;
       if (estado.jugador.x === x && estado.jugador.y === y) return estado;
@@ -306,7 +316,6 @@ function reducer(estado, accion) {
       };
     }
 
-    // Navegación
     case "NAVEGACION_CONFIG": {
       const patch = accion.payload ?? {};
       const nuevaNav = { ...estado.navegacion, ...patch };
@@ -323,14 +332,12 @@ function reducer(estado, accion) {
       return { ...estado, navegacion: { ...nuevaNav, paddingX, paddingY } };
     }
 
-    // Debug
     case "DEBUG_SET": {
       const activo = !!accion.payload;
       if (estado.debug.activo === activo) return estado;
       return { ...estado, debug: { ...estado.debug, activo } };
     }
 
-    // Interacción indirecta
     case "INTERACCION_INDIRECTA_SET": {
       const { activa, tecla, zonaId } = accion.payload || {};
       const next = {
@@ -349,10 +356,7 @@ function reducer(estado, accion) {
 
     case "INTERACCION_INDIRECTA_CLEAR": {
       if (!estado.interaccionIndirecta.activa && !estado.interaccionIndirecta.zonaId) return estado;
-      return {
-        ...estado,
-        interaccionIndirecta: { activa: false, tecla: "E", zonaId: null },
-      };
+      return { ...estado, interaccionIndirecta: { activa: false, tecla: "E", zonaId: null } };
     }
 
     default:
@@ -363,7 +367,12 @@ function reducer(estado, accion) {
 export function ProveedorEstadoJuego({ children }) {
   const [estado, dispatch] = useReducer(reducer, null, inicializarEstado);
 
-  // ✅ Jugador: vida/escudos/daño
+  const derrotarEnemigo = useCallback((id) => {
+  if (!id) return;
+  dispatch({ type: "ENEMIGO_DERROTAR", payload: { id } });
+}, []);
+
+  // vida/escudos/daño
   const jugadorRecibirDanio = useCallback((puntos = 1) => {
     dispatch({ type: "JUGADOR_RECIBIR_DANIO", payload: { puntos } });
   }, []);
@@ -376,7 +385,7 @@ export function ProveedorEstadoJuego({ children }) {
     dispatch({ type: "JUGADOR_SET_ESCUDOS", payload: escudos });
   }, []);
 
-  // ✅ Inventario: set / add (numéricos)
+  // inventario
   const inventarioSetItem = useCallback((key, value) => {
     if (!key) return;
     dispatch({ type: "JUGADOR_INVENTARIO_SET_ITEM", payload: { key, value } });
@@ -396,7 +405,6 @@ export function ProveedorEstadoJuego({ children }) {
     dispatch({ type: "JUGADOR_INVENTARIO_ADD_ITEM", payload: { key, delta } });
   }, []);
 
-  // ✅ Inventario: escudos (array de tipos)
   const inventarioAgregarEscudoTipo = useCallback((tipo) => {
     if (!tipo) return;
     dispatch({ type: "JUGADOR_INVENTARIO_ADD_ESCUDO_TIPO", payload: { tipo } });
@@ -407,13 +415,17 @@ export function ProveedorEstadoJuego({ children }) {
     dispatch({ type: "JUGADOR_INVENTARIO_REMOVE_ESCUDO_TIPO", payload: { tipo } });
   }, []);
 
-  // ✅ Enemigos
-  const derrotarEnemigo = useCallback((id) => {
+  // UI inventario selección
+  const inventarioSeleccionar = useCallback((id) => {
     if (!id) return;
-    dispatch({ type: "ENEMIGO_DERROTAR", payload: { id } });
+    dispatch({ type: "UI_INVENTARIO_SELECCIONAR", payload: { id } });
   }, []);
 
-  // ✅ Plantillas
+  const inventarioDeseleccionar = useCallback(() => {
+    dispatch({ type: "UI_INVENTARIO_DESELECCIONAR" });
+  }, []);
+
+  // plantillas
   const abrirPlantilla = useCallback(({ id, props = {}, origenZonaId = null } = {}) => {
     if (!id) return;
     dispatch({ type: "UI_PLANTILLA_ABRIR", payload: { id, props, origenZonaId } });
@@ -423,7 +435,7 @@ export function ProveedorEstadoJuego({ children }) {
     dispatch({ type: "UI_PLANTILLA_CERRAR" });
   }, []);
 
-  // Jugador
+  // otros
   const establecerPosicionJugador = useCallback((x, y) => {
     dispatch({ type: "JUGADOR_POS", payload: { x: Math.round(x), y: Math.round(y) } });
   }, []);
@@ -452,23 +464,17 @@ export function ProveedorEstadoJuego({ children }) {
     dispatch({ type: "JUGADOR_COLIDER", payload: colider });
   }, []);
 
-  // Navegación
   const configurarNavegacion = useCallback((patch) => {
     dispatch({ type: "NAVEGACION_CONFIG", payload: patch });
   }, []);
 
-  // Debug
   const establecerDebug = useCallback((activo) => {
     dispatch({ type: "DEBUG_SET", payload: activo });
   }, []);
 
-  // Interacción indirecta
   const establecerInteraccionIndirecta = useCallback(
     ({ activa = true, tecla = "E", zonaId = null } = {}) => {
-      dispatch({
-        type: "INTERACCION_INDIRECTA_SET",
-        payload: { activa: !!activa, tecla, zonaId },
-      });
+      dispatch({ type: "INTERACCION_INDIRECTA_SET", payload: { activa: !!activa, tecla, zonaId } });
     },
     []
   );
@@ -479,24 +485,24 @@ export function ProveedorEstadoJuego({ children }) {
 
   const acciones = useMemo(
     () => ({
-      // ✅ vida/escudos/daño + enemigos
       jugadorRecibirDanio,
       setVidaJugador,
       setEscudosJugador,
+
       derrotarEnemigo,
 
-      // ✅ inventario
       inventarioSetItem,
       inventarioAgregarItem,
       inventarioQuitarItem,
       inventarioAgregarEscudoTipo,
       inventarioQuitarEscudoTipo,
 
-      // ✅ Plantillas
+      inventarioSeleccionar,
+      inventarioDeseleccionar,
+
       abrirPlantilla,
       cerrarPlantilla,
 
-      // Jugador
       establecerPosicionJugador,
       guardarInicioJugador,
       establecerRutaJugador,
@@ -504,12 +510,8 @@ export function ProveedorEstadoJuego({ children }) {
       establecerVelocidadJugador,
       establecerAspectoJugador,
       establecerColiderJugador,
-
-      // Navegación / debug
       configurarNavegacion,
       establecerDebug,
-
-      // Interacción indirecta
       establecerInteraccionIndirecta,
       limpiarInteraccionIndirecta,
     }),
@@ -517,12 +519,13 @@ export function ProveedorEstadoJuego({ children }) {
       jugadorRecibirDanio,
       setVidaJugador,
       setEscudosJugador,
-      derrotarEnemigo,
       inventarioSetItem,
       inventarioAgregarItem,
       inventarioQuitarItem,
       inventarioAgregarEscudoTipo,
       inventarioQuitarEscudoTipo,
+      inventarioSeleccionar,
+      inventarioDeseleccionar,
       abrirPlantilla,
       cerrarPlantilla,
       establecerPosicionJugador,

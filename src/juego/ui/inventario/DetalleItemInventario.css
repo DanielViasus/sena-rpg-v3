@@ -1,0 +1,63 @@
+.detalleItem {
+  position: absolute;
+
+  /* Ajusta a tu hoja derecha */
+  left: 24px;
+  bottom: 20px;
+
+  width: 260px;
+  height: 110px;
+
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+
+  padding: 12px;
+
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 6px;
+
+  pointer-events: auto;
+}
+
+.detalleIcono {
+  grid-row: 1 / span 2;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.detalleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detalleNombre {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.detalleDescripcion {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.detalleBtnUsar {
+  grid-column: 1 / span 2;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.detalleBtnUsar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

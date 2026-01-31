@@ -1,0 +1,53 @@
+.slotItem {
+  width: 75px;
+  height: 75px;
+
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-color: transparent;
+
+  position: relative;
+  pointer-events: auto;
+}
+
+.slotItemIcon {
+  width: 36px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+
+  position: absolute;
+  left: 43%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.slotItemContador {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+
+  width: 30px;   /* sin esto, tu svg puede no verse */
+  height: 20px;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: none;
+}
+
+.slotItemCantidad {
+  font-size: 18px;
+  line-height: 1;
+}

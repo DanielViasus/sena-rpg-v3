@@ -11,22 +11,26 @@
   pointer-events: auto;
 }
 
-
+.invPanel {
+  position: relative;
+}
 
 .invCerrar {
   height: 74px;
   width: 74px;
   position: absolute;
-  top: 200px;
-  right: 530px;
+  top: -7%;
+  right:-1%;
   pointer-events: auto;
   cursor: pointer;
   z-index: 20;
   border: none;
   background-color: rgba(0, 0, 0, 0);
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
-
-
 
 /* ✅ 816x488 y adaptable si la pantalla es más pequeña */
 .invContenedor {
@@ -41,22 +45,130 @@
   background-position: center;
   background-size: cover;
 
- 
   position: relative;
+}
+
+/* hoja izquierda */
+.hojaIzquierda {
+  height: 365px;
+  width: 315px;
+  position: absolute;
+  top: 47px;
+  left: 55px;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.aspectoJugador {
+  position: absolute;
+  top: 120px;
+  left: 100px;
+  scale: 1.2;
+}
+
+.nombreInventario {
+  position: absolute;
+  top: 7%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  letter-spacing: 2px;
+  width: 100%;
+  font-size: 25px;
+  opacity: 40%;
+}
+
+.levelInventario {
+  position: absolute;
+  bottom: 0%;
+  right: 0%;
+  width: 30%;
+  font-size: 25px;
+  opacity: 30%;
+}
+
+/* ✅ contenedor de fila (para ubicar el bloque vida/escudos relativo al personaje) */
+.invFilaJugadorVida {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ✅ Wrapper fijo (NO cambia con vida/escudos) */
+.invVidaWrapper {
+  position: absolute;
+  right: 32px;
+  top: 30%;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  /* ✅ aquí va el “zoom” estable */
+  transform: scale(1.3);
+  transform-origin: top right; /* fijo: no “salta” al cambiar hijos */
+}
+
+/* ✅ columna de corazones */
+.invVidaCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ✅ columna de escudos (debajo de los corazones) */
+.invEscudosCol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Iconos: SIN scale aquí */
+.invIconoVida {
+  width: 28px;   /* base antes de escalar; con scale(2) -> 56px */
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.invIconoEscudo {
+  width: 26px;   /* base antes de escalar; con scale(2) -> 52px */
+  height: 26px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.hojaDerecha{
+    height: 365px;
+  width: 315px;
+  position: absolute;
+  top: 47px;
+  right: 55px;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
   
 }
 
-/* Debug opcional (lo quitas después) */
-.invDebug {
+.titulo {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  top: 7%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  letter-spacing: 2px;
+  width: 100%;
+  font-size: 25px;
+  opacity: 40%;
+}
 
-  padding: 10px;
-  border-radius: 10px;
-
+.invGridSlots{
+  position: absolute;
+  top: 20%;
+  left: 15%;
   
-
-  font-size: 12px;
-  line-height: 1.3;
+  width: 75%;
+  align-items: center;
+  justify-content: center;
 }

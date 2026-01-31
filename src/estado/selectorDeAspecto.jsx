@@ -1,11 +1,8 @@
 // src/estado/selectorDeAspecto.jsx
 
 // ✅ Importa aquí TODAS las skins (una sola vez)
-import skinDefaultIdle from "../assets/personajes/default/idle.webp";
-import skinDefaultWalk from "../assets/personajes/default/walk.webp";
+import skinDefaultIdle from "../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
 
-import skinIsaiasIdle from "../assets/personajes/isaias/idle.webp";
-import skinIsaiasWalk from "../assets/personajes/isaias/walk.webp";
 
 // Ejemplo: rival / otros (si aplica)
 // import skinCalaveraIdle from "../assets/personajes/calavera/idle.webp";
