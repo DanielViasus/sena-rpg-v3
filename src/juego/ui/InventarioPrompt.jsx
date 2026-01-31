@@ -16,8 +16,8 @@ import corazonLleno from "../../assets/ui/corazones/Corazon.svg";
 import corazonMitad from "../../assets/ui/corazones/CorazonMitad.svg";
 import corazonVacio from "../../assets/ui/corazones/CorazonVacio.svg";
 
-import escudoImg from "../../assets/ui/escudos/Escudo.svg";
-import escudoVacio from "../../assets/ui/escudos/EscudoVacio.svg";
+import escudoImg from "../../assets/ui/escudos/Escudos.svg";
+import escudoVacio from "../../assets/ui/escudos/EscudosVacios.svg";
 
 // ✅ ICONOS DE ITEMS
 import iconoPosion from "../../assets/ui/slots/iconoPosion.svg";
