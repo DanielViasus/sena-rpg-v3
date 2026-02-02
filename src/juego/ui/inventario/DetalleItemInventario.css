@@ -39,15 +39,27 @@
 }
 
 .detalleNombre {
+  position: absolute;
   margin: 0;
-  font-size: 14px;
+  font-size: 18px;
   letter-spacing: 1px;
+  opacity: 0.6;
+  left: 30%;
+  top: 15%;
 }
 
 .detalleDescripcion {
+  position: absolute;
+  top: 30%;
+  left: 30%;
   margin: 0;
-  font-size: 12px;
-  opacity: 0.75;
+  font-size: 18px;
+  opacity: 0.35;
+  
+  width: 180px;
+
+  text-align: left;   /* ✅ */
+  padding: 0;
 }
 
 .detalleBtnUsar {

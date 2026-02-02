@@ -75,8 +75,8 @@ export default function DetalleItemInventario({
           <img className="detalleIcono" src={item.icono} alt={item.nombre || ""} />
 
           <div className="detalleInfo">
-            <h3 className="detalleNombre">{item.nombre}</h3>
-            <p className="detalleDescripcion">{item.descripcion}</p>
+            <h3 className=" pixel-ui2  detalleNombre ">{item.nombre}</h3>
+            <p className="pixel-ui2  detalleDescripcion">{item.descripcion}</p>
           </div>
 
           <button

@@ -70,9 +70,9 @@
 
 .nombreInventario {
   position: absolute;
-  top: 7%;
+  top: -0%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -0%);
   letter-spacing: 2px;
   width: 100%;
   font-size: 25px;
@@ -154,7 +154,7 @@
 
 .titulo {
   position: absolute;
-  top: 7%;
+  top: 1%;
   left: 50%;
   transform: translate(-50%, -50%);
   letter-spacing: 2px;
@@ -165,7 +165,7 @@
 
 .invGridSlots{
   position: absolute;
-  top: 20%;
+  top: 17%;
   left: 15%;
   
   width: 75%;

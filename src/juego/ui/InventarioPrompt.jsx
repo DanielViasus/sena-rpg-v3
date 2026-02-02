@@ -55,14 +55,14 @@ export default function InventarioPrompt() {
     () => ({
       posion: {
         nombre: "Posión",
-        descripcion: "Restaura 1 punto de vida.",
+        descripcion: "Restaura medio corazon. (de un solo uso)",
         tipo: "vida",
         valor: 1,
         icono: iconoPosion,
       },
       superPosion: {
         nombre: "Súper Posión",
-        descripcion: "Restaura 2 puntos de vida.",
+        descripcion: "Restaura un corazon.",
         tipo: "vida",
         valor: 2,
         icono: iconoSuperPosion,
@@ -85,7 +85,7 @@ export default function InventarioPrompt() {
         nombre: "Monedas",
         descripcion: "Moneda de intercambio.",
         tipo: "moneda",
-        valor: 0,
+        valor: 6,
         icono: iconoMonedas,
       },
     }),
@@ -222,7 +222,7 @@ export default function InventarioPrompt() {
 
           {/* HOJA DERECHA */}
           <div className="hojaDerecha" style={{ backgroundImage: `url(${baseHojaDerecha})` }}>
-            <p className="pixel-ui2 titulo">Inventario</p>
+            <p className="pixel-ui2 nombreInventario">Inventario</p>
 
             <div className="invGridSlots">
               {slots.map((s) => (
