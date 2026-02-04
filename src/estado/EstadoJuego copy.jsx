@@ -37,11 +37,21 @@ const ESTADO_INICIAL_BASE = {
       posion: 2,
       monedas: 6,
       escudos: ["basico"],
-      
     },
   },
 
   enemigos: {},
+
+  // ✅ NUEVO: puntajes
+  puntaje: {
+    combateActual: 0, // se acumula solo dentro del combate actual
+    total: 0, // suma de todos los combates (nivel / sesión)
+  },
+
+  // ✅ NUEVO: registro global de preguntas acertadas (no se repiten en el mundo)
+  preguntas: {
+    acertadasIds: [], // array de string ids (sin duplicados)
+  },
 
   navegacion: {
     tamCelda: 14,
@@ -61,7 +71,7 @@ const ESTADO_INICIAL_BASE = {
   ui: {
     plantillaActiva: null,
     inventario: {
-      seleccionadoId: null, // ✅ NUEVO
+      seleccionadoId: null,
     },
   },
 };
@@ -80,26 +90,102 @@ function inicializarEstado() {
 
 function reducer(estado, accion) {
   switch (accion.type) {
+    // ======================
+    // ENEMIGOS
+    // ======================
+    case "ENEMIGO_DERROTAR": {
+      const id = String(accion.payload?.id || "");
+      if (!id) return estado;
+
+      const prev = estado.enemigos?.[id];
+      if (prev?.derrotado) return estado;
+
+      return {
+        ...estado,
+        enemigos: {
+          ...(estado.enemigos || {}),
+          [id]: { ...(prev || {}), derrotado: true },
+        },
+      };
+    }
 
     // ======================
-// ENEMIGOS
-// ======================
-case "ENEMIGO_DERROTAR": {
-  const id = String(accion.payload?.id || "");
-  if (!id) return estado;
+    // ✅ PUNTAJE (AURA)
+    // Reglas:
+    // - correcto: suma "puntos" (normalmente atkMult)
+    // - incorrecto: resta la mitad de "puntos"
+    // - nunca baja de 0
+    // - huir: descarta combateActual
+    // - cerrar con victoria/derrota: suma combateActual a total y resetea combateActual
+    // ======================
+    case "PUNTAJE_COMBATE_RESET": {
+      if ((estado.puntaje?.combateActual ?? 0) === 0) return estado;
+      return { ...estado, puntaje: { ...(estado.puntaje || {}), combateActual: 0 } };
+    }
 
-  const prev = estado.enemigos?.[id];
-  if (prev?.derrotado) return estado;
+    case "PUNTAJE_COMBATE_APLICAR_TURNO": {
+      const puntos = Math.floor(Number(accion.payload?.puntos ?? 0));
+      const correcto = !!accion.payload?.correcto;
 
-  return {
-    ...estado,
-    enemigos: {
-      ...(estado.enemigos || {}),
-      [id]: { ...(prev || {}), derrotado: true },
-    },
-  };
-}
+      if (!Number.isFinite(puntos) || puntos <= 0) return estado;
 
+      const prev = Math.floor(Number(estado.puntaje?.combateActual ?? 0));
+
+      // correcto: +puntos
+      // incorrecto: -half(puntos) (redondeo hacia abajo)
+      const delta = correcto ? puntos : -Math.floor(puntos / 2);
+
+      const next = Math.max(0, prev + delta);
+      if (next === prev) return estado;
+
+      return { ...estado, puntaje: { ...(estado.puntaje || {}), combateActual: next } };
+    }
+
+    case "PUNTAJE_COMBATE_DESCARTAR": {
+      // huir -> no se suma al total
+      if ((estado.puntaje?.combateActual ?? 0) === 0) return estado;
+      return { ...estado, puntaje: { ...(estado.puntaje || {}), combateActual: 0 } };
+    }
+
+    case "PUNTAJE_COMBATE_CERRAR_Y_SUMAR_TOTAL": {
+      const combate = Math.floor(Number(estado.puntaje?.combateActual ?? 0));
+      const totalPrev = Math.floor(Number(estado.puntaje?.total ?? 0));
+      const totalNext = totalPrev + Math.max(0, combate);
+
+      // resetea combateActual y suma a total
+      return {
+        ...estado,
+        puntaje: {
+          ...(estado.puntaje || {}),
+          combateActual: 0,
+          total: totalNext,
+        },
+      };
+    }
+
+    // ======================
+    // ✅ PREGUNTAS (REGISTRO GLOBAL)
+    // - Solo marcar cuando se acierta
+    // - No duplicados
+    // ======================
+    case "PREGUNTA_MARCAR_ACERTADA": {
+      const id = String(accion.payload?.id ?? "").trim();
+      if (!id) return estado;
+
+      const prevArr = Array.isArray(estado.preguntas?.acertadasIds)
+        ? estado.preguntas.acertadasIds
+        : [];
+
+      if (prevArr.includes(id)) return estado;
+
+      return {
+        ...estado,
+        preguntas: {
+          ...(estado.preguntas || {}),
+          acertadasIds: [...prevArr, id],
+        },
+      };
+    }
 
     // ======================
     // VIDA / ESCUDOS COMBATE
@@ -368,9 +454,9 @@ export function ProveedorEstadoJuego({ children }) {
   const [estado, dispatch] = useReducer(reducer, null, inicializarEstado);
 
   const derrotarEnemigo = useCallback((id) => {
-  if (!id) return;
-  dispatch({ type: "ENEMIGO_DERROTAR", payload: { id } });
-}, []);
+    if (!id) return;
+    dispatch({ type: "ENEMIGO_DERROTAR", payload: { id } });
+  }, []);
 
   // vida/escudos/daño
   const jugadorRecibirDanio = useCallback((puntos = 1) => {
@@ -383,6 +469,32 @@ export function ProveedorEstadoJuego({ children }) {
 
   const setEscudosJugador = useCallback((escudos) => {
     dispatch({ type: "JUGADOR_SET_ESCUDOS", payload: escudos });
+  }, []);
+
+  // ✅ puntaje
+  const puntajeResetCombate = useCallback(() => {
+    dispatch({ type: "PUNTAJE_COMBATE_RESET" });
+  }, []);
+
+  // ✅ aplica puntos por turno (correcto suma, incorrecto resta half)
+  const puntajeAplicarTurno = useCallback(({ puntos = 0, correcto = false } = {}) => {
+    dispatch({ type: "PUNTAJE_COMBATE_APLICAR_TURNO", payload: { puntos, correcto: !!correcto } });
+  }, []);
+
+  // ✅ huir => descarta combateActual
+  const puntajeDescartarCombate = useCallback(() => {
+    dispatch({ type: "PUNTAJE_COMBATE_DESCARTAR" });
+  }, []);
+
+  // ✅ victoria/derrota => suma a total
+  const puntajeCerrarCombateYSumarTotal = useCallback(() => {
+    dispatch({ type: "PUNTAJE_COMBATE_CERRAR_Y_SUMAR_TOTAL" });
+  }, []);
+
+  // ✅ preguntas globales
+  const preguntaMarcarAcertada = useCallback((id) => {
+    if (!id) return;
+    dispatch({ type: "PREGUNTA_MARCAR_ACERTADA", payload: { id } });
   }, []);
 
   // inventario
@@ -491,6 +603,15 @@ export function ProveedorEstadoJuego({ children }) {
 
       derrotarEnemigo,
 
+      // ✅ puntaje
+      puntajeResetCombate,
+      puntajeAplicarTurno,
+      puntajeDescartarCombate,
+      puntajeCerrarCombateYSumarTotal,
+
+      // ✅ preguntas globales
+      preguntaMarcarAcertada,
+
       inventarioSetItem,
       inventarioAgregarItem,
       inventarioQuitarItem,
@@ -519,6 +640,15 @@ export function ProveedorEstadoJuego({ children }) {
       jugadorRecibirDanio,
       setVidaJugador,
       setEscudosJugador,
+      derrotarEnemigo,
+
+      puntajeResetCombate,
+      puntajeAplicarTurno,
+      puntajeDescartarCombate,
+      puntajeCerrarCombateYSumarTotal,
+
+      preguntaMarcarAcertada,
+
       inventarioSetItem,
       inventarioAgregarItem,
       inventarioQuitarItem,

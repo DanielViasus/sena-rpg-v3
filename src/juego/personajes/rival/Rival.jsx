@@ -25,8 +25,11 @@ export default function Rival({
   npcAlto = 128,
   npcColider = null,
   colider = null, // ✅ alias cómodo (como Objeto)
-  
+
   npcBloqueaMovimiento = true,
+
+  // ===== ✅ NUEVO: Tier del rival (1 a 3) =====
+  tier = 1,
 
   // ===== Modo interacción =====
   tecla = "E",
@@ -86,6 +89,13 @@ export default function Rival({
   // ✅ Directa final (si no se pasa prop, se comporta como antes)
   const usarDirectaFinal =
     typeof usarDirecta === "boolean" ? usarDirecta : !usarIndirecta;
+
+  // ===== ✅ Tier normalizado (1..3) =====
+  const tierFinal = useMemo(() => {
+    const t = Number(tier);
+    if (!Number.isFinite(t)) return 1;
+    return Math.min(3, Math.max(1, Math.round(t)));
+  }, [tier]);
 
   // ===== Derrotado (estado global) =====
   const derrotado = !!estado.enemigos?.[id]?.derrotado;
@@ -152,13 +162,17 @@ export default function Rival({
       const pid = plantillaIdRef.current;
       if (!pid) return;
 
+      // ✅ Inyectamos tier en props para el UI de combate
+      const baseProps = plantillaPropsRef.current ?? {};
+      const propsConTier = { ...baseProps, tier: tierFinal };
+
       abrirPlantilla({
         id: pid,
-        props: plantillaPropsRef.current ?? {},
+        props: propsConTier,
         origenZonaId,
       });
     },
-    [abrirPlantilla]
+    [abrirPlantilla, tierFinal]
   );
 
   // ===== Cooldown =====
@@ -208,6 +222,7 @@ export default function Rival({
         tecla,
         bloqueaMovimiento: false,
         rivalId: id,
+        rivalTier: tierFinal, // ✅ extra metadata útil
         alInteractuar: () => triggerConCooldown(() => abrirCombate(id), 300),
       });
     } else {
@@ -224,6 +239,7 @@ export default function Rival({
         tipo: "Rival",
         bloqueaMovimiento: false,
         rivalId: id,
+        rivalTier: tierFinal, // ✅ extra metadata útil
 
         // nombres posibles (tu motor puede usar alguno)
         alEntrar: fnEnter,
@@ -245,6 +261,7 @@ export default function Rival({
     usarIndirecta,
     usarDirectaFinal,
     tecla,
+    tierFinal,
     rectInd.x,
     rectInd.y,
     rectInd.ancho,
@@ -315,7 +332,14 @@ export default function Rival({
     const ax = anclaPatrullaRef.current.x;
     const ay = anclaPatrullaRef.current.y;
 
-    const base = rectDesdePies(ax, ay, patrullaAncho, patrullaAlto, patrullaOffsetX, patrullaOffsetY);
+    const base = rectDesdePies(
+      ax,
+      ay,
+      patrullaAncho,
+      patrullaAlto,
+      patrullaOffsetX,
+      patrullaOffsetY
+    );
 
     return {
       base,
@@ -324,7 +348,14 @@ export default function Rival({
       minY: base.y,
       maxY: base.y + base.alto,
     };
-  }, [patrullaEnabled, patrullaAncho, patrullaAlto, patrullaOffsetX, patrullaOffsetY, rectDesdePies]);
+  }, [
+    patrullaEnabled,
+    patrullaAncho,
+    patrullaAlto,
+    patrullaOffsetX,
+    patrullaOffsetY,
+    rectDesdePies,
+  ]);
 
   const velRef = useRef({ vx: 1, vy: 0 });
   const pausaHastaRef = useRef(0);
@@ -338,7 +369,8 @@ export default function Rival({
     }
 
     // evita direcciones casi horizontales para que SI se note el eje Y
-    let vx = 1, vy = 1;
+    let vx = 1,
+      vy = 1;
     for (let i = 0; i < 12; i++) {
       const ang = Math.random() * Math.PI * 2;
       vx = Math.cos(ang);
@@ -376,16 +408,28 @@ export default function Rival({
         let hitX = false;
         let hitY = false;
 
-        if (nx < areaPatrulla.minX) { nx = areaPatrulla.minX; hitX = true; }
-        else if (nx > areaPatrulla.maxX) { nx = areaPatrulla.maxX; hitX = true; }
+        if (nx < areaPatrulla.minX) {
+          nx = areaPatrulla.minX;
+          hitX = true;
+        } else if (nx > areaPatrulla.maxX) {
+          nx = areaPatrulla.maxX;
+          hitX = true;
+        }
 
-        if (ny < areaPatrulla.minY) { ny = areaPatrulla.minY; hitY = true; }
-        else if (ny > areaPatrulla.maxY) { ny = areaPatrulla.maxY; hitY = true; }
+        if (ny < areaPatrulla.minY) {
+          ny = areaPatrulla.minY;
+          hitY = true;
+        } else if (ny > areaPatrulla.maxY) {
+          ny = areaPatrulla.maxY;
+          hitY = true;
+        }
 
         if (hitX || hitY) {
           // rebote por eje
-          if (hitX) velRef.current = { ...velRef.current, vx: -velRef.current.vx };
-          if (hitY && !patrullaSoloHorizontal) velRef.current = { ...velRef.current, vy: -velRef.current.vy };
+          if (hitX)
+            velRef.current = { ...velRef.current, vx: -velRef.current.vx };
+          if (hitY && !patrullaSoloHorizontal)
+            velRef.current = { ...velRef.current, vy: -velRef.current.vy };
 
           const pausa = Math.max(0, Number(patrullaPausaMs || 0));
           if (pausa) pausaHastaRef.current = t + pausa;
@@ -403,7 +447,15 @@ export default function Rival({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, [patrullaEnabled, derrotado, areaPatrulla, patrullaVelocidad, patrullaPausaMs, pickDir, patrullaSoloHorizontal]);
+  }, [
+    patrullaEnabled,
+    derrotado,
+    areaPatrulla,
+    patrullaVelocidad,
+    patrullaPausaMs,
+    pickDir,
+    patrullaSoloHorizontal,
+  ]);
 
   // ===== Render =====
   const src = derrotado && imagenDerrotado ? imagenDerrotado : imagen;
@@ -414,21 +466,55 @@ export default function Rival({
 
   const nid = useMemo(() => `${id}__npc`, [id]);
 
+  // ===== ✅ Label debug (tier) =====
+  const debugLabel = useMemo(() => {
+    if (!debugActivo) return null;
+    const t = `TIER ${tierFinal}`;
+    return derrotado ? `${t} (DERROTADO)` : t;
+  }, [debugActivo, tierFinal, derrotado]);
+
   return (
     <>
       {renderNpc && (
-        <Objeto
-          id={nid}
-          categoria="Decoration"
-          x={pos.x}
-          y={pos.y}
-          ancho={npcW}
-          alto={npcH}
-          imagen={src}
-          colider={npcColider ?? colider}
-          bloqueaMovimiento={false}//bloqueaMovimiento={derrotado ? false : !!npcBloqueaMovimiento}
-          mostrarDebug={debugActivo}
-        />
+        <>
+          <Objeto
+            id={nid}
+            categoria="Decoration"
+            x={pos.x}
+            y={pos.y}
+            ancho={npcW}
+            alto={npcH}
+            imagen={src}
+            colider={npcColider ?? colider}
+            bloqueaMovimiento={false} //bloqueaMovimiento={derrotado ? false : !!npcBloqueaMovimiento}
+            mostrarDebug={debugActivo}
+          />
+
+          {/* ✅ DEBUG: label de tier */}
+          {debugActivo && (
+            <div
+              style={{
+                position: "absolute",
+                left: Math.round(pos.x - 70),
+                top: Math.round(pos.y - npcH - 26),
+                width: 140,
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "2px 6px",
+                borderRadius: 8,
+                background: "rgba(0,0,0,0.65)",
+                border: "1px solid rgba(255,255,255,0.25)",
+                color: "white",
+                zIndex: 999997,
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            >
+              {debugLabel}
+            </div>
+          )}
+        </>
       )}
 
       {/* DEBUG: zona INDIRECTA */}
