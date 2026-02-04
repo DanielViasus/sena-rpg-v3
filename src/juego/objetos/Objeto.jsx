@@ -163,14 +163,15 @@ export default function Objeto({
   // Color debug por categoría
   const colorCollider = useMemo(() => {
     const c = String(categoria || "").toLowerCase();
-    if (c === "pared") return "rgba(255, 0, 0, 0.85)"; // rojo
-    if (c === "decoration" || c === "decoracion") return "rgba(0, 160, 255, 0.85)"; // azul
-    return "rgba(0, 255, 0, 0.85)"; // verde (otros)
+    if (c === "pared") return "rgba(255, 0, 0, 0.85)";
+    if (c === "decoration" || c === "decoracion")
+      return "rgba(0, 160, 255, 0.85)";
+    return "rgba(0, 255, 0, 0.85)";
   }, [categoria]);
 
   /**
    * zIndex (profundidad)
-   * - basado en la MITAD del collider (rectBase) (lo que acordamos)
+   * - basado en la MITAD del collider (rectBase)
    * - si no hay colider, usa la mitad del sprite
    */
   const zIndex = useMemo(() => {
@@ -192,6 +193,26 @@ export default function Objeto({
           pointerEvents: "none",
         }}
       >
+        <p
+          style={{
+            position: "absolute",
+            left: "20%",
+            top: "10%",
+          }}
+        >
+          {mostrarDebug ? id : ""}
+        </p>
+        <p
+          style={{
+            justifyContent: "center",
+            position: "absolute",
+            left: "20%",
+            bottom: "20%",
+          }}
+        >
+          {mostrarDebug ? id : ""}
+        </p>
+
         <RenderImagen />
 
         {/* Debug: límites del sprite */}

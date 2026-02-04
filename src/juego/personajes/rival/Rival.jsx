@@ -24,6 +24,8 @@ export default function Rival({
   npcAncho = 128,
   npcAlto = 128,
   npcColider = null,
+  colider = null, // ✅ alias cómodo (como Objeto)
+  
   npcBloqueaMovimiento = true,
 
   // ===== Modo interacción =====
@@ -423,7 +425,7 @@ export default function Rival({
           ancho={npcW}
           alto={npcH}
           imagen={src}
-          colider={npcColider}
+          colider={npcColider ?? colider}
           bloqueaMovimiento={false}//bloqueaMovimiento={derrotado ? false : !!npcBloqueaMovimiento}
           mostrarDebug={debugActivo}
         />

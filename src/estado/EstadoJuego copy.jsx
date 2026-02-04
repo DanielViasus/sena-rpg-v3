@@ -1,4 +1,3 @@
-// src/estado/EstadoJuego.jsx
 import React, { createContext, useCallback, useContext, useMemo, useReducer } from "react";
 
 /**
@@ -38,18 +37,11 @@ const ESTADO_INICIAL_BASE = {
       posion: 2,
       monedas: 6,
       escudos: ["basico"],
+      
     },
   },
 
   enemigos: {},
-
-  // ✅ NUEVO: registro/estadísticas de eliminaciones
-  estadisticas: {
-    criaturasEliminadas: 0,
-    bossesDerrotados: 0,
-    criaturasEliminadasIds: [],
-    bossesDerrotadosIds: [],
-  },
 
   navegacion: {
     tamCelda: 14,
@@ -88,112 +80,26 @@ function inicializarEstado() {
 
 function reducer(estado, accion) {
   switch (accion.type) {
+
     // ======================
-    // ENEMIGOS / REGISTRO
-    // ======================
-    case "ENEMIGO_DERROTAR": {
-      const id = String(accion.payload?.id || "");
-      if (!id) return estado;
+// ENEMIGOS
+// ======================
+case "ENEMIGO_DERROTAR": {
+  const id = String(accion.payload?.id || "");
+  if (!id) return estado;
 
-      const tipo = String(accion.payload?.tipo || "creatura"); // ✅ default compatible
+  const prev = estado.enemigos?.[id];
+  if (prev?.derrotado) return estado;
 
-      const prev = estado.enemigos?.[id];
-      if (prev?.derrotado) return estado;
+  return {
+    ...estado,
+    enemigos: {
+      ...(estado.enemigos || {}),
+      [id]: { ...(prev || {}), derrotado: true },
+    },
+  };
+}
 
-      const statsPrev = estado.estadisticas || {
-        criaturasEliminadas: 0,
-        bossesDerrotados: 0,
-        criaturasEliminadasIds: [],
-        bossesDerrotadosIds: [],
-      };
-
-      const criaturasIdsPrev = Array.isArray(statsPrev.criaturasEliminadasIds)
-        ? statsPrev.criaturasEliminadasIds
-        : [];
-
-      const bossesIdsPrev = Array.isArray(statsPrev.bossesDerrotadosIds)
-        ? statsPrev.bossesDerrotadosIds
-        : [];
-
-      const esBoss = tipo === "boss";
-
-      const nextStats = esBoss
-        ? {
-            ...statsPrev,
-            bossesDerrotados: bossesIdsPrev.includes(id)
-              ? statsPrev.bossesDerrotados
-              : Number(statsPrev.bossesDerrotados || 0) + 1,
-            bossesDerrotadosIds: bossesIdsPrev.includes(id)
-              ? bossesIdsPrev
-              : [...bossesIdsPrev, id],
-          }
-        : {
-            ...statsPrev,
-            criaturasEliminadas: criaturasIdsPrev.includes(id)
-              ? statsPrev.criaturasEliminadas
-              : Number(statsPrev.criaturasEliminadas || 0) + 1,
-            criaturasEliminadasIds: criaturasIdsPrev.includes(id)
-              ? criaturasIdsPrev
-              : [...criaturasIdsPrev, id],
-          };
-
-      return {
-        ...estado,
-        enemigos: {
-          ...(estado.enemigos || {}),
-          [id]: { ...(prev || {}), derrotado: true, tipo }, // ✅ guardamos tipo por si lo necesitas
-        },
-        estadisticas: nextStats,
-      };
-    }
-
-    case "ENEMIGO_REVIVIR": {
-      const id = String(accion.payload?.id || "");
-      if (!id) return estado;
-
-      const prev = estado.enemigos?.[id];
-      if (!prev?.derrotado) return estado;
-
-      const tipo = String(accion.payload?.tipo || prev?.tipo || "creatura");
-
-      const statsPrev = estado.estadisticas || {
-        criaturasEliminadas: 0,
-        bossesDerrotados: 0,
-        criaturasEliminadasIds: [],
-        bossesDerrotadosIds: [],
-      };
-
-      const criaturasIdsPrev = Array.isArray(statsPrev.criaturasEliminadasIds)
-        ? statsPrev.criaturasEliminadasIds
-        : [];
-
-      const bossesIdsPrev = Array.isArray(statsPrev.bossesDerrotadosIds)
-        ? statsPrev.bossesDerrotadosIds
-        : [];
-
-      const esBoss = tipo === "boss";
-
-      const nextStats = esBoss
-        ? {
-            ...statsPrev,
-            bossesDerrotadosIds: bossesIdsPrev.filter((x) => x !== id),
-            bossesDerrotados: Math.max(0, Number(statsPrev.bossesDerrotados || 0) - 1),
-          }
-        : {
-            ...statsPrev,
-            criaturasEliminadasIds: criaturasIdsPrev.filter((x) => x !== id),
-            criaturasEliminadas: Math.max(0, Number(statsPrev.criaturasEliminadas || 0) - 1),
-          };
-
-      return {
-        ...estado,
-        enemigos: {
-          ...(estado.enemigos || {}),
-          [id]: { ...(prev || {}), derrotado: false },
-        },
-        estadisticas: nextStats,
-      };
-    }
 
     // ======================
     // VIDA / ESCUDOS COMBATE
@@ -461,26 +367,10 @@ function reducer(estado, accion) {
 export function ProveedorEstadoJuego({ children }) {
   const [estado, dispatch] = useReducer(reducer, null, inicializarEstado);
 
-  // ✅ ENEMIGOS / REGISTRO
-  const derrotarEnemigo = useCallback((id, { tipo = "creatura" } = {}) => {
-    if (!id) return;
-    dispatch({ type: "ENEMIGO_DERROTAR", payload: { id, tipo } });
-  }, []);
-
-  const derrotarBoss = useCallback((id) => {
-    if (!id) return;
-    dispatch({ type: "ENEMIGO_DERROTAR", payload: { id, tipo: "boss" } });
-  }, []);
-
-  const revivirEnemigo = useCallback((id, { tipo = "creatura" } = {}) => {
-    if (!id) return;
-    dispatch({ type: "ENEMIGO_REVIVIR", payload: { id, tipo } });
-  }, []);
-
-  const revivirBoss = useCallback((id) => {
-    if (!id) return;
-    dispatch({ type: "ENEMIGO_REVIVIR", payload: { id, tipo: "boss" } });
-  }, []);
+  const derrotarEnemigo = useCallback((id) => {
+  if (!id) return;
+  dispatch({ type: "ENEMIGO_DERROTAR", payload: { id } });
+}, []);
 
   // vida/escudos/daño
   const jugadorRecibirDanio = useCallback((puntos = 1) => {
@@ -599,11 +489,7 @@ export function ProveedorEstadoJuego({ children }) {
       setVidaJugador,
       setEscudosJugador,
 
-      // ✅ enemigos / registro
       derrotarEnemigo,
-      derrotarBoss,
-      revivirEnemigo,
-      revivirBoss,
 
       inventarioSetItem,
       inventarioAgregarItem,
@@ -633,13 +519,6 @@ export function ProveedorEstadoJuego({ children }) {
       jugadorRecibirDanio,
       setVidaJugador,
       setEscudosJugador,
-
-      // ✅ deps enemigos / registro
-      derrotarEnemigo,
-      derrotarBoss,
-      revivirEnemigo,
-      revivirBoss,
-
       inventarioSetItem,
       inventarioAgregarItem,
       inventarioQuitarItem,

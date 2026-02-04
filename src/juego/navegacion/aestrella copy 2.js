@@ -178,19 +178,7 @@ function vecinos(grilla, n, diagonales) {
   return res;
 }
 
-/**
- * A* con límites opcionales para evitar congelar la UI.
- * - maxExpansiones: corta la búsqueda si explora demasiados nodos.
- * - maxPasosRuta: si la ruta reconstruida supera este tamaño, se cancela.
- *
- * Compatibilidad: si no pasas opciones, funciona como antes.
- */
-export function encontrarRutaAEstrella(
-  grilla,
-  inicio,
-  fin,
-  { diagonales = true, maxExpansiones = 20000, maxPasosRuta = 600 } = {}
-) {
+export function encontrarRutaAEstrella(grilla, inicio, fin, { diagonales = true } = {}) {
   if (!esCeldaLibre(grilla, inicio.x, inicio.y)) return [];
   if (!esCeldaLibre(grilla, fin.x, fin.y)) return [];
 
@@ -218,36 +206,19 @@ export function encontrarRutaAEstrella(
   });
   openMark[startI] = 1;
 
-  // ✅ NUEVO: contador de expansiones (para abortar)
-  let expansiones = 0;
-
   while (open.size) {
-    expansiones++;
-    if (expansiones > maxExpansiones) {
-      // Abort: ruta muy costosa o probablemente imposible
-      return [];
-    }
-
     const cur = open.pop();
     if (!cur) break;
 
     if (cur.i === endI) {
       const ruta = [];
       let k = endI;
-
-      // ✅ Reconstrucción con límite para evitar rutas gigantes
       while (k !== -1) {
         const cx = k % cols;
         const cy = Math.floor(k / cols);
         ruta.push({ x: cx, y: cy });
-
-        if (ruta.length > maxPasosRuta) {
-          return [];
-        }
-
         k = cameFrom[k];
       }
-
       ruta.reverse();
       return ruta;
     }
@@ -266,7 +237,6 @@ export function encontrarRutaAEstrella(
           openMark[ni] = 1;
           open.push({ x: nb.x, y: nb.y, i: ni, f });
         } else {
-          // mantenemos tu comportamiento para no “romper” nada
           open.push({ x: nb.x, y: nb.y, i: ni, f });
         }
       }

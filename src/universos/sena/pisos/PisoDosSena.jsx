@@ -10,8 +10,17 @@ import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
 import SistemaMoverJugador from "../../../juego/sistema/SistemaMoverJugador.jsx";
 
 import Objeto from "../../../juego/objetos/Objeto.jsx";
+import Puerta from "../../../juego/objetos/Puerta.jsx";
+
 import TrazoRuta from "../../../juego/ui/TrazoRuta.jsx";
 import IndicadorInteraccionIndirecta from "../../../juego/ui/IndicadorInteraccionIndirecta.jsx";
+
+import Rival from "../../../juego/personajes/rival/Rival.jsx";
+import rivalCalavera from "../../../assets/gif/personajes/rivales/gifRival_128x128_180ms.webp";
+import rivalCalaveraDerrorada from "../../../assets/gif/personajes/rivales/derrotaRival4.svg";
+
+import puertaAbierta from "../../../assets/svg/objetos/Puertas/puertaAbierta.svg"
+import puertaCerrada from "../../../assets/svg/objetos/Puertas/puertaCerrada.svg"
 
 
 // +++ agrega tu icono (ajusta la ruta real)
@@ -55,8 +64,9 @@ import {
 } from "../../../juego/navegacion/aestrella.js";
 
 
+
 export default function PisoDosSena() {
-  const ANCHO_MUNDO = 6400;
+  const ANCHO_MUNDO = 4500;
   const LARGO_MUNDO = 3200;
   const spriteJugador = { ancho: 128, alto: 128 };
    const { jugador, navegacion, debug, interaccionIndirecta } = useEstadoJuego();
@@ -106,34 +116,70 @@ export default function PisoDosSena() {
   }, [ANCHO_MUNDO, LARGO_MUNDO, establecerPosicionJugador, guardarInicioJugador]);
 
   function alClickMundo({ x, y }) {
-    // 1) Marca visual
-    marcar({ x, y });
+  // 1) Marca visual
+  marcar({ x, y });
 
-    // 2) Ruta A*
-    const inicioCrudo = mundoAPosCelda(grilla, jugador.x, jugador.y);
-    const inicioCand = listarCeldasLibresCercanas(grilla, inicioCrudo, 45);
-    const inicio = inicioCand[0];
-    if (!inicio) return limpiarRutaJugador();
+  // =========================
+  // LIMITES DE SEGURIDAD
+  // =========================
+  const MAX_DIST_PX = 1500;
 
-    const finCrudo = mundoAPosCelda(grilla, x, y);
-    const finCand = listarCeldasLibresCercanas(grilla, finCrudo, 60);
-    if (!finCand.length) return limpiarRutaJugador();
+  const dx = x - jugador.x;
+  const dy = y - jugador.y;
+  const dist = Math.hypot(dx, dy);
 
-    let rutaCeldas = [];
-    for (const candidato of finCand) {
-      const r = encontrarRutaAEstrella(grilla, inicio, candidato, { diagonales: true });
-      if (r.length) {
-        rutaCeldas = r;
-        break;
-      }
-    }
-
-    if (!rutaCeldas.length) return limpiarRutaJugador();
-
-    const rutaGiros = comprimirRutaPorGiros(rutaCeldas);
-    const waypoints = rutaGiros.map((c) => celdaAMundo(grilla, c.x, c.y));
-    establecerRutaJugador(waypoints);
+  // Si está muy lejos, cancelamos para evitar rutas enormes
+  if (dist > MAX_DIST_PX) {
+    return limpiarRutaJugador();
   }
+
+  // Traducimos 1500px a pasos (celdas) según tamCelda
+  const maxPasosRuta = Math.ceil(MAX_DIST_PX / grilla.tamCelda) + 20;
+
+  // Budget de expansiones (heurístico, ajustable)
+  const maxExpansiones = maxPasosRuta * 200;
+
+  // Para no quedarnos probando demasiados candidatos en caso imposible
+  const MAX_CANDIDATOS_FIN = 12;
+
+  // 2) Ruta A*
+  const inicioCrudo = mundoAPosCelda(grilla, jugador.x, jugador.y);
+  const inicioCand = listarCeldasLibresCercanas(grilla, inicioCrudo, 45);
+  const inicio = inicioCand[0];
+  if (!inicio) return limpiarRutaJugador();
+
+  const finCrudo = mundoAPosCelda(grilla, x, y);
+  const finCandAll = listarCeldasLibresCercanas(grilla, finCrudo, 60);
+  if (!finCandAll.length) return limpiarRutaJugador();
+
+  // Limitar candidatos (mejora cuando no hay ruta)
+  const finCand = finCandAll.slice(0, MAX_CANDIDATOS_FIN);
+
+  let rutaCeldas = [];
+  for (const candidato of finCand) {
+    const r = encontrarRutaAEstrella(grilla, inicio, candidato, {
+      diagonales: true,
+      maxExpansiones,
+      maxPasosRuta,
+    });
+
+    if (r.length) {
+      rutaCeldas = r;
+      break;
+    }
+  }
+
+  if (!rutaCeldas.length) return limpiarRutaJugador();
+
+  const rutaGiros = comprimirRutaPorGiros(rutaCeldas);
+  const waypoints = rutaGiros.map((c) => celdaAMundo(grilla, c.x, c.y));
+
+  // Cinturón y tirantes: si por alguna razón quedó enorme, no mover
+  if (waypoints.length > maxPasosRuta) return limpiarRutaJugador();
+
+  establecerRutaJugador(waypoints);
+}
+
   
    const camara = useMemo(
     () => ({
@@ -153,299 +199,377 @@ export default function PisoDosSena() {
 
 
   const paredesEnElMundo = [
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:700/2,
-    y:800,
-    ancho:700,
-    alto:800,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:750,
-    y:900,
-    ancho:100,
-    alto:400,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:900,
-    y:100,
-    ancho:400,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-   {
-    id:"pared",
-    categoria:"Pared",
-    x:50,
-    y:1300,
-    ancho:100,
-    alto:500,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1100/2,
-    y:3200,
-    ancho:1100,
-    alto:1900,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:900,
-    y:1300,
-    ancho:400,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1050,
-    y:900,
-    ancho:100,
-    alto:400,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1450,
-    y:900,
-    ancho:700,
-    alto:900,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1800,
-    y:1000,
-    ancho:200,
-    alto:500,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1400,
-    y:3200,
-    ancho:600,
-    alto:700,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1900,
-    y:3200,
-    ancho:400,
-    alto:800,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:1900,
-    y:2100,
-    ancho:400,
-    alto:900,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:2350,
-    y:2000,
-    ancho:500,
-    alto:1500,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4100,
-    y:100,
-    ancho:4600,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4350,
-    y:200,
-    ancho:3100,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4350,
-    y:500,
-    ancho:3100,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4500,
-    y:1000,
-    ancho:3800,
-    alto:500,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:2400,
-    y:3200,
-    ancho:600,
-    alto:600,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:3850,
-    y:1200,
-    ancho:2500,
-    alto:200,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:2900,
-    y:1300,
-    ancho:600,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:2750,
-    y:2800,
-    ancho:100,
-    alto:200,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:3050,
-    y:2000,
-    ancho:300,
-    alto:400,
-    mostrarDebug:debug.activo,
-  },
-  
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:3400,
-    y:2800,
-    ancho:800,
-    alto:1100,
-    mostrarDebug:debug.activo,
-  },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:150/2,
+      y:3200,
+      ancho:150,
+      alto:3200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:600,
+      y:1200,
+      ancho:900,
+      alto:1200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:900,
+      y:1400,
+      ancho:300,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },//puerta 1,1
 
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4750,
-    y:3200,
-    ancho:3300,
-    alto:700,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4150,
-    y:1800,
-    ancho:100,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:4650,
-    y:1800,
-    ancho:900,
-    alto:600,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:5550,
-    y:1800,
-    ancho:900,
-    alto:300,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:5950,
-    y:1500,
-    ancho:100,
-    alto:200,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:6050,
-    y:1100,
-    ancho:300,
-    alto:100,
-    mostrarDebug:debug.activo,
-  },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1150,
+      y:1200,
+      ancho:200,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },//puerta 2,1
 
-  
-   {
-    id:"pared",
-    categoria:"Pared",
-    x:6300,
-    y:1800,
-    ancho:200,
-    alto:800,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:6350,
-    y:2500,
-    ancho:100,
-    alto:700,
-    mostrarDebug:debug.activo,
-  },
-  {
-    id:"pared",
-    categoria:"Pared",
-    x:6350,
-    y:500,
-    ancho:100,
-    alto:400,
-    mostrarDebug:debug.activo,
-  },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1350,
+      y:400,
+      ancho:600,
+      alto:400,
+      mostrarDebug:debug.activo,
+    },
+
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1850,
+      y:1200,
+      ancho:400,
+      alto:1200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2250,
+      y:600,
+      ancho:400,
+      alto:600,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1550,
+      y:1200,
+      ancho:200,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1750,
+      y:1400,
+      ancho:200,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2100,
+      y:1200,
+      ancho:100,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2400,
+      y:1200,
+      ancho:100,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },// pared 10
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2700,
+      y:1200,
+      ancho:500,
+      alto:1200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2850,
+      y:1400,
+      ancho:200,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:3600,
+      y:1100,
+      ancho:1300,
+      alto:1100,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:4375,
+      y:3200,
+      ancho:250,
+      alto:3200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:3600,
+      y:3200,
+      ancho:1300,
+      alto:1300,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2900,
+      y:3200,
+      ancho:100,
+      alto:1600,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2800,
+      y:2000,
+      ancho:100,
+      alto:400,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:2650,
+      y:3200,
+      ancho:400,
+      alto:800,
+      mostrarDebug:debug.activo,
+    },
+     {
+      id:"pared",
+      categoria:"Pared",
+      x:2500,
+      y:2000,
+      ancho:100,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1750,
+      y:1800,
+      ancho:200,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:900,
+      y:1800,
+      ancho:300,
+      alto:200,
+      mostrarDebug:debug.activo,
+    },
+    {
+      id:"pared",
+      categoria:"Pared",
+      x:1300,
+      y:3200,
+      ancho:2300,
+      alto:1400,
+      mostrarDebug:debug.activo,
+    },
   ];
+
+
+  const enemigosPresentes = [
+  {
+    id: "RIVAL_DIRECTO 0",
+    x: 1340,
+    y: 1330,
+    imagen: rivalCalavera,
+    imagenDerrotado: rivalCalaveraDerrorada,
+
+    // tamaño del sprite del NPC (si lo quieres explícito)
+    npcAncho: 128,
+    npcAlto: 128,
+
+    // ✅ collider físico del NPC (NO ocupa todo el gif)
+    colider: { ancho: 60, alto: 20, offsetX: 0, offsetY: 0 },
+
+    usarIndirecta: false,
+    usarDirecta: true,
+    dirAncho: 150,
+    dirAlto: 150,
+    dirMargen: 50,
+
+    combatePlantillaId: "COMBATE_RIVAL",
+    combateProps: { rivalNombre: "calaveraDirecta" },
+
+    patrullaActiva: true,
+    patrullaAncho: 160,
+    patrullaAlto: 120,
+    patrullaVelocidad: 45,
+
+    mostrarDebug: debug.activo,
+  },
+
+  {
+    id: "RIVAL_DIRECTO 1",
+    x: 2100,
+    y: 3200 / 2,
+    imagen: rivalCalavera,
+    imagenDerrotado: rivalCalaveraDerrorada,
+    npcAncho: 128,
+    npcAlto: 128,
+    colider: { ancho: 60, alto: 20, offsetX: 0, offsetY: 0 },
+
+    usarIndirecta: false,
+    usarDirecta: true,
+    dirAncho: 150,
+    dirAlto: 150,
+    dirMargen: 50,
+
+    combatePlantillaId: "COMBATE_RIVAL",
+    combateProps: { rivalNombre: "calaveraDirecta" },
+
+    patrullaActiva: true,
+    patrullaAncho: 160,
+    patrullaAlto: 120,
+    patrullaVelocidad: 45,
+
+    mostrarDebug: debug.activo,
+  },
+
+  {
+    id: "RIVAL_DIRECTO 2",
+    x: 2400,
+    y: 3200 / 2,
+    imagen: rivalCalavera,
+    imagenDerrotado: rivalCalaveraDerrorada,
+    npcAncho: 128,
+    npcAlto: 128,
+
+    // ✅ tu ejemplo (pero ojo: alto=1 lo vuelve casi una línea)
+    colider: { ancho: 200, alto: 1, offsetX: 0, offsetY: 0 },
+
+    usarIndirecta: false,
+    usarDirecta: true,
+    dirAncho: 150,
+    dirAlto: 150,
+    dirMargen: 50,
+
+    combatePlantillaId: "COMBATE_RIVAL",
+    combateProps: { rivalNombre: "calaveraDirecta" },
+
+    patrullaActiva: true,
+    patrullaAncho: 160,
+    patrullaAlto: 120,
+    patrullaVelocidad: 45,
+
+    mostrarDebug: debug.activo,
+  },
+];
+
+
+  const puertasPresentes = [
+  {
+    id: "PUERTA_1",
+    x: 1350,
+    y: 1200,
+    ancho: 200,
+    alto: 144.44,
+    imagenCerrada: puertaCerrada,
+    imagenAbierta: puertaAbierta,
+
+    // ✅ Collider físico (bloqueo) configurable (como Objeto)
+    // Ejemplo: “columna” central delgada
+    colider: { ancho: 200, alto: 1, offsetX: 0, offsetY: -10 },
+
+    // ✅ Bloqueada por requisito (no abre/cierra)
+    requisitoHabilitado: false,
+
+    // ✅ Zona interacción INDIRECTA (más grande y por fuera)
+    usarInteraccionIndirecta: true,
+    tecla: "E",
+    intAncho: 320,
+    intAlto: 280,
+    intOffsetX: 0,
+    intOffsetY: 80,
+    intMargenZona: 10,
+  },
+  {
+    id: "PUERTA_2",
+    x: 2250,
+    y: 1200,
+    ancho: 200,
+    alto: 144.44,
+    imagenCerrada: puertaCerrada,
+    imagenAbierta: puertaAbierta,
+    colider: { ancho: 200, alto: 1, offsetX: 0, offsetY: -10 },
+    requisitoHabilitado: false,
+
+    usarInteraccionIndirecta: true,
+    tecla: "E",
+    intAncho: 320,
+    intAlto: 240,
+    intOffsetX: 0,
+    intOffsetY: 30,
+    intMargenZona: 10,
+  },
+  {
+    id: "PUERTA_3",
+    x: 2652,
+    y: 1944,
+    ancho: 200,
+    alto: 144.44,
+    imagenCerrada: puertaCerrada,
+    imagenAbierta: puertaAbierta,
+    colider: { ancho: 200, alto: 1, offsetX: 0, offsetY: 0 },
+
+    // ✅ Desbloqueada (sí abre/cierra)
+    requisitoHabilitado: true,
+
+    usarInteraccionIndirecta: true,
+    tecla: "E",
+    intAncho: 320,
+    intAlto: 240,
+    intOffsetX: 0,
+    intOffsetY: 30,
+    intMargenZona: 10,
+  },
+];
+
 
 
   return (
@@ -460,6 +584,7 @@ export default function PisoDosSena() {
       >
 
       {paredesEnElMundo.map((objeto,i) => (
+        
           <Objeto
             key={objeto.id+i}
             id={objeto.id+i}
@@ -473,6 +598,23 @@ export default function PisoDosSena() {
             mostrarDebug={objeto.mostrarDebug}
           />
         ))}
+
+
+       {puertasPresentes.map((p, i) => (
+  <Puerta
+    key={`${p.id}_${i}`}
+    id={`${p.id}_${i}`}
+    {...p}
+    flashBloqueadaMs={100}
+    mostrarDebug={debug.activo}
+  />
+))}
+
+
+       {enemigosPresentes.map((rival,a) => (
+          <Rival key={rival.id+a} id={rival.id+a} {...rival} />
+        ))}
+
         <TrazoRuta
           anchoMundo={ANCHO_MUNDO}
           largoMundo={LARGO_MUNDO}
