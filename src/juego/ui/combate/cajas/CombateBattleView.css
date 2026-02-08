@@ -1,0 +1,303 @@
+/* src/ui/combate/CombateBattleView.css */
+
+.cbv-root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* =========================
+   HUD TOP (tekken style)
+   ========================= */
+.cbv-hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+
+  padding: 10px 14px;
+}
+
+/* Lados HUD */
+.cbv-hudSide {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cbv-hudSide--right {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.cbv-hudName {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.cbv-hudStats {
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.95;
+}
+
+.cbv-hudBars {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.cbv-hudSide--right .cbv-hudBars {
+  justify-content: flex-end;
+}
+
+/* Barras base */
+.cbv-bar {
+  height: 10px;
+  flex: 1;
+  background: #2b2b2b;
+  border: 2px solid #111;
+  box-sizing: border-box;
+}
+
+.cbv-bar--shield {
+  flex: 0.5;
+}
+
+/* Indicador central */
+.cbv-hudCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cbv-indicador {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
+.cbv-indicadorText {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* =========================
+   STAGE (2D plano)
+   ========================= */
+.cbv-stage {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+
+  display: flex;
+  align-items: flex-end; /* “piso” */
+  justify-content: space-between;
+
+  padding: 10px 26px 18px;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.cbv-fighter {
+  position: relative;
+  width: 40%;
+  height: 100%;
+
+  display: flex;
+  align-items: flex-end;
+}
+
+.cbv-fighter--player {
+  justify-content: flex-start;
+}
+
+.cbv-fighter--rival {
+  justify-content: flex-end;
+}
+
+/* capas aura */
+.cbv-auraBg,
+.cbv-auraFront {
+  position: absolute;
+  bottom: 0;
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
+.cbv-fighter--player .cbv-auraBg,
+.cbv-fighter--player .cbv-auraFront {
+  left: 0;
+}
+
+.cbv-fighter--rival .cbv-auraBg,
+.cbv-fighter--rival .cbv-auraFront {
+  right: 0;
+}
+
+/* sprite */
+.cbv-sprite {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+/* espejar rival */
+.cbv-sprite--rival {
+  transform: scaleX(-1);
+}
+
+/* placeholder simple (si no usas el sistema de colores) */
+.cbv-placeholder {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* =========================
+   Placeholders por color
+   (si NO llega imagen)
+   ========================= */
+.cbv-box {
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cbv-boxLabel {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Indicador */
+.cbv-box--indicator {
+  width: 54px;
+  height: 54px;
+  background: #ffb703; /* color 1 */
+}
+
+/* Aura BG Jugador */
+.cbv-box--auraBgJ {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 220px;
+  height: 220px;
+  background: #219ebc; /* color 2 */
+}
+
+/* Sprite Jugador */
+.cbv-box--spriteJ {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  background: #8ecae6; /* color 3 */
+  z-index: 2;
+}
+
+/* Aura Front Jugador */
+.cbv-box--auraFrontJ {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 220px;
+  height: 220px;
+  background: #06d6a0; /* color 4 */
+}
+
+/* Aura BG Rival */
+.cbv-box--auraBgR {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 220px;
+  height: 220px;
+  background: #8338ec; /* color 5 */
+}
+
+/* Sprite Rival */
+.cbv-box--spriteR {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  background: #ff006e; /* color 6 */
+  z-index: 2;
+}
+
+/* Aura Front Rival */
+.cbv-box--auraFrontR {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 220px;
+  height: 220px;
+  background: #fb5607; /* color 7 */
+}
+
+/* =========================
+   Responsive
+   ========================= */
+@media (max-width: 720px) {
+  .cbv-indicador {
+    width: 42px;
+    height: 42px;
+  }
+
+  .cbv-box--indicator {
+    width: 42px;
+    height: 42px;
+  }
+
+  .cbv-sprite {
+    width: 120px;
+    height: 120px;
+  }
+
+  .cbv-box--spriteJ,
+  .cbv-box--spriteR {
+    width: 120px;
+    height: 120px;
+  }
+
+  .cbv-auraBg,
+  .cbv-auraFront {
+    width: 170px;
+    height: 170px;
+  }
+
+  .cbv-box--auraBgJ,
+  .cbv-box--auraFrontJ,
+  .cbv-box--auraBgR,
+  .cbv-box--auraFrontR {
+    width: 170px;
+    height: 170px;
+  }
+
+  .cbv-stage {
+    min-height: 180px;
+    padding: 10px 16px 14px;
+  }
+}

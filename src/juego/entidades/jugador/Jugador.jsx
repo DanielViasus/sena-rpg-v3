@@ -1,14 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useEstadoJuego } from "../../../estado/EstadoJuego.jsx";
-
-// ✅ WebP animados (ajusta rutas/nombres a los tuyos)
-import gifIdle from "../../../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
-import gifWalk from "../../../assets/svg/personajes/jugador/gifWalk_128x128_200ms.webp";
-
-const ASPECTOS = {
-  idle: gifIdle,
-  walk: gifWalk,
-};
+import { selectorDeAspecto } from "../../../estado/selectorDeAspecto.jsx";
 
 export default function Jugador({
   ancho = 128,
@@ -25,42 +17,41 @@ export default function Jugador({
     offsetY: coliderOffsetY,
   } = jugador.colider;
 
-  const debugActivo = typeof mostrarDebug === "boolean" ? mostrarDebug : debug.activo;
+  const debugActivo =
+    typeof mostrarDebug === "boolean" ? mostrarDebug : debug.activo;
 
   // ✅ ¿Se está moviendo? (si hay ruta activa)
   const estaMoviendo = (jugador.ruta?.length || 0) > 0;
 
-  // ✅ Idle / Walk
-  const src = estaMoviendo ? ASPECTOS.walk : ASPECTOS.idle;
+  // ✅ Animación actual
+  const anim = estaMoviendo ? "walk" : "idle";
+
+  // ✅ Skin según estado global (jugador.aspecto) + animación
+  // Si jugador.aspecto no existe o no está en el mapa -> fallback a DEFAULT
+  const src = selectorDeAspecto(jugador.aspecto, anim);
 
   // =========================
   // ✅ Dirección (flip)
   // =========================
-
-
-  // usamos el siguiente waypoint para decidir hacia dónde "va"
-  const objetivoX = jugador.ruta?.[0]?.x ?? null;
-
-  const dirRef = useRef("izquierda");        // o como lo tengas
+  const dirRef = useRef("izquierda");
   const prevXRef = useRef(jugador.x);
 
-useEffect(() => {
-  if (!estaMoviendo) {
-    prevXRef.current = jugador.x; // resetea referencia al parar
-    return;
-  }
+  useEffect(() => {
+    if (!estaMoviendo) {
+      prevXRef.current = jugador.x; // resetea referencia al parar
+      return;
+    }
 
-  const dxPos = jugador.x - prevXRef.current;
-  prevXRef.current = jugador.x;
+    const dxPos = jugador.x - prevXRef.current;
+    prevXRef.current = jugador.x;
 
-  // ✅ Deadzone: evita flips por 0.1px / snaps
-  const UMBRAL = 1.5; // prueba 0.75, 1, 1.5 según tu movimiento
-  if (Math.abs(dxPos) < UMBRAL) return;
+    // ✅ Deadzone: evita flips por 0.1px / snaps
+    const UMBRAL = 1.5;
+    if (Math.abs(dxPos) < UMBRAL) return;
 
-  // ✅ Mantén tu mapeo invertido (según tu sprite)
-  dirRef.current = dxPos < 0 ? "izquierda" : "derecha";
-}, [estaMoviendo, jugador.x]);
-
+    // ✅ Mantén tu mapeo invertido (según tu sprite)
+    dirRef.current = dxPos < 0 ? "izquierda" : "derecha";
+  }, [estaMoviendo, jugador.x]);
 
   const flipX = dirRef.current === "izquierda";
 
@@ -108,7 +99,7 @@ useEffect(() => {
 
       {/* ✅ Sprite (solo este se voltea) */}
       <img
-        src={src}
+        src={src || undefined}
         alt=""
         draggable={false}
         style={{

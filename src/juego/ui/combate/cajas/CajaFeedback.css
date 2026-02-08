@@ -1,0 +1,48 @@
+/* src/ui/combate/cajas/CajaFeedback.css */
+
+.caja-feedback {
+  width: 1166px;
+  height: 352px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.caja-feedback__bar {
+  width: 1142px;
+  height: 100px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.caja-feedback__barText {
+  font-size: 32px;
+  font-weight: 900;
+  text-align: center;
+  padding: 0 16px;
+}
+
+.caja-feedback__body {
+  width: 1142px;
+  max-width: 100%;
+  margin-top: 16px;
+  font-size: 14px;
+  opacity: 0.92;
+  line-height: 1.35;
+}
+
+.caja-feedback__hint {
+  width: 1142px;
+  max-width: 100%;
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.75;
+}

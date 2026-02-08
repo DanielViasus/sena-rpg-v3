@@ -1,18 +1,19 @@
-// src/ui/HUDJugador.jsx
 import { useMemo } from "react";
-import { useEstadoJuego } from "../../estado/EstadoJuego.jsx";
-import "./HUDJugador.css";
+import { useEstadoJuego, useAccionesJuego } from "../../../estado/EstadoJuego.jsx";
+import "./HUDCombate.css";
 
-import skin from "../../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
-import marco from "../../assets/ui/marcos/marcoDePiedra.svg";
+import skin from "../../../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
+import marco from "../../../assets/ui/marcos/marcoDePiedra.svg";
 
 // 👇 ideal: 3 estados (lleno/mitad/vacio)
-import corazonLleno from "../../assets/ui/corazones/Corazon.svg";
-import corazonMitad from "../../assets/ui/corazones/CorazonMitad.svg";
-import corazonVacio from "../../assets/ui/corazones/CorazonVacio.svg";
+import corazonLleno from "../../../assets/ui/corazones/Corazon.svg";
+import corazonMitad from "../../../assets/ui/corazones/CorazonMitad.svg";
+import corazonVacio from "../../../assets/ui/corazones/CorazonVacio.svg";
 
 // 👇 escudo (mismo tamaño que corazón)
-import escudoImg from "../../assets/ui/escudos/Escudos.svg";
+import escudoImg from "../../../assets/ui/escudos/Escudos.svg";
+
+
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -32,8 +33,8 @@ export default function HUDJugador() {
   const zoomY = -8; // px (negativo = sube hacia la cara)
 
   const datos = useMemo(() => {
-    const vida = estado.jugador?.vida ?? 6;
-    const vidaMax = estado.jugador?.vidaMax ?? 6;
+    const vida = estado.jugador?.vida ?? 6; // ejemplo
+    const vidaMax = estado.jugador?.vidaMax ?? 6; // ejemplo
     const escudos = estado.jugador?.escudos ?? 0;
 
     const nombre = estado.jugador?.nombre ?? "Daniel Alejandro Viasus S.";
@@ -59,7 +60,7 @@ export default function HUDJugador() {
   }, [vidaNormalizada]);
 
   const escudos = useMemo(() => {
-    const n = clamp(datos.escudos, 0, 10);
+    const n = clamp(datos.escudos, 0, 10); // por si acaso
     return Array.from({ length: n }, (_, i) => i);
   }, [datos.escudos]);
 
@@ -83,7 +84,6 @@ export default function HUDJugador() {
               className="avatarSkin"
               src={skin}
               alt="skin"
-              draggable={false}
               style={{
                 "--zoom": String(zoom),
                 "--zoomX": `${zoomX}px`,
@@ -95,7 +95,6 @@ export default function HUDJugador() {
 
         <div className="infoCol">
           <p className="pixel-ui nombre">{estado.jugador.nombre}</p>
-
           <div className="filaIconos">
             {corazones.map((c, idx) => (
               <img
@@ -103,20 +102,13 @@ export default function HUDJugador() {
                 className="iconoVida"
                 src={c.src}
                 alt={`corazon-${c.tipo}`}
-                draggable={false}
               />
             ))}
 
             {!!escudos.length && <div className="separador" />}
 
             {escudos.map((i) => (
-              <img
-                key={`sh-${i}`}
-                className="iconoVida"
-                src={escudoImg}
-                alt="escudo"
-                draggable={false}
-              />
+              <img key={`sh-${i}`} className="iconoVida" src={escudoImg} alt="escudo" />
             ))}
           </div>
         </div>

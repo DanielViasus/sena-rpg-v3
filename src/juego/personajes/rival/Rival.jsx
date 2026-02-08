@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccionesRegistroColisiones } from "../../colisiones/RegistroColisiones.jsx";
 import { useEstadoJuego, useAccionesJuego } from "../../../estado/EstadoJuego.jsx";
+import { selectorDeRival } from "../../../estado/selectorDeAspecto.jsx"; // ✅ mismo casing que el archivo real
 import Objeto from "../../objetos/Objeto.jsx";
 
 /**
@@ -9,54 +10,52 @@ import Objeto from "../../objetos/Objeto.jsx";
  * - Interacción Indirecta (tecla) y/o Directa (al entrar)
  * - Directa tiene fallback local (por si tu motor NO llama callbacks tipo "alEntrar")
  * - Patrulla: rebote dentro de un rect (2D por defecto)
+ *
+ * ✅ NUEVO:
+ * - Puede tomar imagen desde selectorDeRival(familia, tier, anim)
+ * - Mantiene compatibilidad si pasas imagen/imagenDerrotado por props
+ * - ✅ Inyecta familia a la plantilla: props.rivalFamilia
  */
 export default function Rival({
-  // ===== Identidad (obligatorio) =====
   id,
 
-  // ===== Posición PIES (centro-bottom) =====
+  nombre = "",
+  tier = 1,
+  vidas = 1,
+  escudos = 0,
+
+  // ✅ familia para selector
+  familia = "CALAVERA",
+
   x,
   y,
 
-  // ===== Visual (NPC / Objeto) =====
+  // ✅ Compat: si viene imagen, se respeta
   imagen,
   imagenDerrotado = null,
   npcAncho = 128,
   npcAlto = 128,
   npcColider = null,
-  colider = null, // ✅ alias cómodo (como Objeto)
+  colider = null,
 
   npcBloqueaMovimiento = true,
 
-  // ===== ✅ NUEVO: Tier del rival (1 a 3) =====
-  tier = 1,
-
-  // ===== Modo interacción =====
   tecla = "E",
   usarIndirecta = true,
-
-  /**
-   * ✅ NUEVO (opcional):
-   * Si lo pasas, controlas directa de forma independiente.
-   * Si NO lo pasas, conserva el comportamiento viejo: usarDirecta = !usarIndirecta
-   */
   usarDirecta = undefined,
 
-  // ===== Zona INDIRECTA (rect anclado a pies) =====
   indAncho = 120,
   indAlto = 120,
   indOffsetX = 0,
   indOffsetY = 0,
   indMargen = 0,
 
-  // ===== Zona DIRECTA (rect anclado a pies) =====
   dirAncho = 80,
   dirAlto = 80,
   dirOffsetX = 0,
   dirOffsetY = 0,
   dirMargen = 0,
 
-  // ===== Plantilla combate =====
   combatePlantillaId = "COMBATE_RIVAL",
   combateProps = {
     titulo: "COMBATE",
@@ -64,10 +63,8 @@ export default function Rival({
     danioPerder: 1,
   },
 
-  // ===== Debug =====
   mostrarDebug = false,
 
-  // ===== Patrulla (opcional) =====
   patrullaActiva = false,
   patrullaAncho = 0,
   patrullaAlto = 0,
@@ -76,7 +73,6 @@ export default function Rival({
   patrullaVelocidad = 30,
   patrullaPausaMs = 400,
 
-  // ✅ NUEVO: si quieres volver al viejo comportamiento
   patrullaSoloHorizontal = false,
 }) {
   const estado = useEstadoJuego();
@@ -86,21 +82,34 @@ export default function Rival({
   const debugActivo =
     typeof mostrarDebug === "boolean" ? mostrarDebug : !!estado.debug?.activo;
 
-  // ✅ Directa final (si no se pasa prop, se comporta como antes)
   const usarDirectaFinal =
     typeof usarDirecta === "boolean" ? usarDirecta : !usarIndirecta;
 
-  // ===== ✅ Tier normalizado (1..3) =====
+  const nombreFinal = useMemo(() => {
+    const n = String(nombre ?? "").trim();
+    return n ? n : String(id ?? "");
+  }, [nombre, id]);
+
   const tierFinal = useMemo(() => {
     const t = Number(tier);
     if (!Number.isFinite(t)) return 1;
     return Math.min(3, Math.max(1, Math.round(t)));
   }, [tier]);
 
-  // ===== Derrotado (estado global) =====
+  const vidasFinal = useMemo(() => {
+    const v = Math.floor(Number(vidas));
+    if (!Number.isFinite(v)) return 1;
+    return Math.max(0, v);
+  }, [vidas]);
+
+  const escudosFinal = useMemo(() => {
+    const e = Math.floor(Number(escudos));
+    if (!Number.isFinite(e)) return 0;
+    return Math.max(0, e);
+  }, [escudos]);
+
   const derrotado = !!estado.enemigos?.[id]?.derrotado;
 
-  // ===== Refs estables para plantilla =====
   const plantillaIdRef = useRef(combatePlantillaId);
   const plantillaPropsRef = useRef(combateProps);
 
@@ -112,7 +121,6 @@ export default function Rival({
     plantillaPropsRef.current = combateProps;
   }, [combateProps]);
 
-  // ===== Posición actual (para patrulla) =====
   const [pos, setPos] = useState(() => ({
     x: Math.round(x || 0),
     y: Math.round(y || 0),
@@ -122,7 +130,6 @@ export default function Rival({
     setPos({ x: Math.round(x || 0), y: Math.round(y || 0) });
   }, [x, y]);
 
-  // ===== Helpers rect anclado a PIES =====
   const rectDesdePies = useCallback((piesX, piesY, ancho, alto, ox = 0, oy = 0) => {
     const anclaX = Math.round(piesX + (ox ?? 0));
     const anclaY = Math.round(piesY + (oy ?? 0));
@@ -144,38 +151,39 @@ export default function Rival({
 
   const puntoEnRect = useCallback((px, py, r) => {
     if (!r) return false;
-    return (
-      px >= r.x &&
-      px <= r.x + r.ancho &&
-      py >= r.y &&
-      py <= r.y + r.alto
-    );
+    return px >= r.x && px <= r.x + r.ancho && py >= r.y && py <= r.y + r.alto;
   }, []);
 
-  // ===== IDs internos para colliders =====
   const idIndirecta = `${id}__ind`;
   const idDirecta = `${id}__dir`;
 
-  // ===== Abrir combate (estable) =====
   const abrirCombate = useCallback(
     (origenZonaId) => {
       const pid = plantillaIdRef.current;
       if (!pid) return;
 
-      // ✅ Inyectamos tier en props para el UI de combate
       const baseProps = plantillaPropsRef.current ?? {};
-      const propsConTier = { ...baseProps, tier: tierFinal };
+      const propsFinales = {
+        ...baseProps,
 
-      abrirPlantilla({
-        id: pid,
-        props: propsConTier,
-        origenZonaId,
-      });
+        // ✅ metadata del rival para UI
+        rivalId: id,
+        rivalNombre: nombreFinal,
+        rivalFamilia: String(familia ?? "CALAVERA").toUpperCase().trim(), // ✅ clave para selector en combate
+        rivalTier: tierFinal,
+        rivalVidas: vidasFinal,
+        rivalEscudos: escudosFinal,
+
+        // compat
+        familia: String(familia ?? "CALAVERA").toUpperCase().trim(),
+        tier: tierFinal,
+      };
+
+      abrirPlantilla({ id: pid, props: propsFinales, origenZonaId });
     },
-    [abrirPlantilla, tierFinal]
+    [abrirPlantilla, id, nombreFinal, familia, tierFinal, vidasFinal, escudosFinal]
   );
 
-  // ===== Cooldown =====
   const lastTriggerRef = useRef(0);
   const triggerConCooldown = useCallback((fn, cooldownMs = 350) => {
     const now = Date.now();
@@ -184,7 +192,6 @@ export default function Rival({
     fn?.();
   }, []);
 
-  // ===== Rects interacción =====
   const rectIndBase = useMemo(
     () => rectDesdePies(pos.x, pos.y, indAncho, indAlto, indOffsetX, indOffsetY),
     [pos.x, pos.y, indAncho, indAlto, indOffsetX, indOffsetY, rectDesdePies]
@@ -203,7 +210,6 @@ export default function Rival({
     [rectDirBase, dirMargen, aplicarMargen]
   );
 
-  // ===== Registrar colliders =====
   useEffect(() => {
     if (!id) return;
 
@@ -221,15 +227,21 @@ export default function Rival({
         tipo: "Rival",
         tecla,
         bloqueaMovimiento: false,
+
         rivalId: id,
-        rivalTier: tierFinal, // ✅ extra metadata útil
+        rivalNombre: nombreFinal,
+        rivalFamilia: String(familia ?? "CALAVERA").toUpperCase().trim(),
+        rivalTier: tierFinal,
+        rivalVidas: vidasFinal,
+        rivalEscudos: escudosFinal,
+
         alInteractuar: () => triggerConCooldown(() => abrirCombate(id), 300),
       });
     } else {
       removeCollider(idIndirecta);
     }
 
-    // DIRECTA (registramos callback por si tu motor lo usa)
+    // DIRECTA
     if (usarDirectaFinal) {
       const fnEnter = () => triggerConCooldown(() => abrirCombate(id), 400);
 
@@ -238,10 +250,14 @@ export default function Rival({
         categoria: "InteraccionDirecta",
         tipo: "Rival",
         bloqueaMovimiento: false,
-        rivalId: id,
-        rivalTier: tierFinal, // ✅ extra metadata útil
 
-        // nombres posibles (tu motor puede usar alguno)
+        rivalId: id,
+        rivalNombre: nombreFinal,
+        rivalFamilia: String(familia ?? "CALAVERA").toUpperCase().trim(),
+        rivalTier: tierFinal,
+        rivalVidas: vidasFinal,
+        rivalEscudos: escudosFinal,
+
         alEntrar: fnEnter,
         onEnter: fnEnter,
         alEntrarZona: fnEnter,
@@ -257,11 +273,15 @@ export default function Rival({
     };
   }, [
     id,
+    familia,
     derrotado,
     usarIndirecta,
     usarDirectaFinal,
     tecla,
+    nombreFinal,
     tierFinal,
+    vidasFinal,
+    escudosFinal,
     rectInd.x,
     rectInd.y,
     rectInd.ancho,
@@ -276,11 +296,8 @@ export default function Rival({
     triggerConCooldown,
   ]);
 
-  // =====================================================
-  // ✅ FALLBACK DIRECTA: detectar ENTRADA sin depender del motor
-  // =====================================================
+  // ✅ fallback directa: detectar entrada sin motor
   const estabaDentroDirRef = useRef(false);
-
   useEffect(() => {
     if (!usarDirectaFinal || derrotado) {
       estabaDentroDirRef.current = false;
@@ -292,12 +309,9 @@ export default function Rival({
     if (!Number.isFinite(jx) || !Number.isFinite(jy)) return;
 
     const dentro = puntoEnRect(jx, jy, rectDir);
-
-    // solo dispara en flanco (entrar)
     if (dentro && !estabaDentroDirRef.current) {
       triggerConCooldown(() => abrirCombate(id), 400);
     }
-
     estabaDentroDirRef.current = dentro;
   }, [
     usarDirectaFinal,
@@ -314,13 +328,10 @@ export default function Rival({
     id,
   ]);
 
-  // =========================
-  // ===== PATRULLA 2D =======
-  // =========================
+  // ===== Patrulla 2D =====
   const patrullaEnabled =
     !!patrullaActiva && Number(patrullaAncho) > 0 && Number(patrullaAlto) > 0;
 
-  // ancla fija (no sigue al rival)
   const anclaPatrullaRef = useRef({ x: Math.round(x || 0), y: Math.round(y || 0) });
   useEffect(() => {
     anclaPatrullaRef.current = { x: Math.round(x || 0), y: Math.round(y || 0) };
@@ -368,7 +379,6 @@ export default function Rival({
       return;
     }
 
-    // evita direcciones casi horizontales para que SI se note el eje Y
     let vx = 1,
       vy = 1;
     for (let i = 0; i < 12; i++) {
@@ -378,7 +388,6 @@ export default function Rival({
       if (Math.abs(vy) >= 0.35 && Math.abs(vx) >= 0.25) break;
     }
 
-    // normalizar
     const len = Math.hypot(vx, vy) || 1;
     velRef.current = { vx: vx / len, vy: vy / len };
   }, [patrullaSoloHorizontal]);
@@ -425,9 +434,7 @@ export default function Rival({
         }
 
         if (hitX || hitY) {
-          // rebote por eje
-          if (hitX)
-            velRef.current = { ...velRef.current, vx: -velRef.current.vx };
+          if (hitX) velRef.current = { ...velRef.current, vx: -velRef.current.vx };
           if (hitY && !patrullaSoloHorizontal)
             velRef.current = { ...velRef.current, vy: -velRef.current.vy };
 
@@ -457,8 +464,17 @@ export default function Rival({
     patrullaSoloHorizontal,
   ]);
 
-  // ===== Render =====
-  const src = derrotado && imagenDerrotado ? imagenDerrotado : imagen;
+  // ===== Imagen (compat + selector) =====
+  const srcNormal = useMemo(() => {
+    // tu webp actual es caminando, lo tratamos como "idle"
+    return imagen || selectorDeRival(familia, tierFinal, "idle") || null;
+  }, [imagen, familia, tierFinal]);
+
+  const srcDerrotado = useMemo(() => {
+    return imagenDerrotado || selectorDeRival(familia, tierFinal, "derrotado") || null;
+  }, [imagenDerrotado, familia, tierFinal]);
+
+  const src = derrotado ? (srcDerrotado || srcNormal) : srcNormal;
 
   const npcW = Number(npcAncho);
   const npcH = Number(npcAlto);
@@ -466,12 +482,11 @@ export default function Rival({
 
   const nid = useMemo(() => `${id}__npc`, [id]);
 
-  // ===== ✅ Label debug (tier) =====
   const debugLabel = useMemo(() => {
     if (!debugActivo) return null;
-    const t = `TIER ${tierFinal}`;
-    return derrotado ? `${t} (DERROTADO)` : t;
-  }, [debugActivo, tierFinal, derrotado]);
+    const base = `${nombreFinal || id} | ${String(familia).toUpperCase()} | TIER ${tierFinal} | V:${vidasFinal} | E:${escudosFinal}`;
+    return derrotado ? `${base} (DERROTADO)` : base;
+  }, [debugActivo, nombreFinal, id, familia, tierFinal, vidasFinal, escudosFinal, derrotado]);
 
   return (
     <>
@@ -486,18 +501,17 @@ export default function Rival({
             alto={npcH}
             imagen={src}
             colider={npcColider ?? colider}
-            bloqueaMovimiento={false} //bloqueaMovimiento={derrotado ? false : !!npcBloqueaMovimiento}
+            bloqueaMovimiento={false}
             mostrarDebug={debugActivo}
           />
 
-          {/* ✅ DEBUG: label de tier */}
           {debugActivo && (
             <div
               style={{
                 position: "absolute",
-                left: Math.round(pos.x - 70),
+                left: Math.round(pos.x - 140),
                 top: Math.round(pos.y - npcH - 26),
-                width: 140,
+                width: 280,
                 textAlign: "center",
                 fontSize: 12,
                 fontWeight: 700,

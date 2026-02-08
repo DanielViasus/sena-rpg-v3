@@ -1,8 +1,14 @@
 // src/ui/combate/CombatePromptRival.jsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEstadoJuego, useAccionesJuego } from "../../../estado/EstadoJuego.jsx";
-import test from "./../test/listadoTest.js"; // ajusta la ruta si cambia
+import test from "./../test/listadoTest.js";
 import "./CombatePromptRival.css";
+
+// ✅ selectores de skins
+import { selectorDeAspecto, selectorDeRival } from "../../../estado/selectorDeAspecto.jsx";
+
+// ✅ Fondo del PANEL
+import bgPanel from "../../../assets/fondos/bgPanel.png";
 
 const ENEMIGOS_POR_TIER = {
   1: { vidas: 4, probEscudosAdicionales: 0.08, escudosAdicionales: 1, escudosPorDefecto: 0 },
@@ -17,7 +23,7 @@ const AURA_REGLAS = {
   3: { atkMult: 7, defFailMult: 4, tierBonus: 3 },
 };
 
-const TECLAS_OPCION = ["S", "E", "N", "A"]; // indices 0..3
+const TECLAS_OPCION = ["S", "E", "N", "A"];
 
 function clampTier(t) {
   const n = Number(t);
@@ -52,13 +58,13 @@ export default function CombatePromptRival() {
     derrotarEnemigo,
     jugadorRecibirDanio,
 
-    // ✅ puntaje
+    // puntaje
     puntajeResetCombate,
     puntajeAplicarTurno,
     puntajeDescartarCombate,
     puntajeCerrarCombateYSumarTotal,
 
-    // ✅ preguntas globales
+    // preguntas globales
     preguntaMarcarAcertada,
   } = useAccionesJuego();
 
@@ -68,45 +74,47 @@ export default function CombatePromptRival() {
   const origenZonaId = plantilla.origenZonaId;
   const props = plantilla.props || {};
 
+  const rivalNombre = String(props.rivalNombre ?? "").trim() || "RIVAL";
+  const rivalTierProp = props.rivalTier ?? props.tier ?? 1;
+  const rivalVidasProp = props.rivalVidas;
+  const rivalEscudosProp = props.rivalEscudos;
+
+  // ✅ familia para selectorDeRival
+  const rivalFamilia = String(props.rivalFamilia ?? props.familia ?? "CALAVERA").trim() || "CALAVERA";
+
   const titulo = props.titulo ?? "COMBATE";
   const texto = props.texto ?? "Combate por turnos.";
-  const baseTier = clampTier(props.tier ?? 1);
+
+  const baseTier = clampTier(rivalTierProp);
+
   const danioPerderBase = Number.isFinite(props.danioPerder) ? props.danioPerder : 1;
   const feedbackDelayMs = Number.isFinite(props.feedbackDelayMs) ? props.feedbackDelayMs : 2000;
 
   const debugActivo = !!estado.debug?.activo;
 
-  // ✅ Global: preguntas acertadas (no se repiten en todo el mundo)
   const preguntasAcertadasGlobal = Array.isArray(estado.preguntas?.acertadasIds)
     ? estado.preguntas.acertadasIds
     : [];
 
-  // ✅ Global: puntajes
   const puntajeCombateActual = Math.floor(Number(estado.puntaje?.combateActual ?? 0));
   const puntajeTotal = Math.floor(Number(estado.puntaje?.total ?? 0));
 
-  // ===== Jugador (global) =====
   const vidasJugador = Number.isFinite(estado.jugador?.vida) ? estado.jugador.vida : 0;
   const escudosJugador = Number.isFinite(estado.jugador?.escudos) ? estado.jugador.escudos : 0;
 
-  // ===== Rival (local) =====
   const initRef = useRef(false);
   const [vidasRival, setVidasRival] = useState(1);
   const [escudosRival, setEscudosRival] = useState(0);
 
-  // ===== Turnos/Fases =====
-  const [turno, setTurno] = useState("JUGADOR"); // JUGADOR | RIVAL | FIN
-  const [fase, setFase] = useState("MENU"); // MENU | PREGUNTA | FEEDBACK | FIN
+  const [turno, setTurno] = useState("JUGADOR");
+  const [fase, setFase] = useState("MENU");
 
-  // ===== Resultado FIN =====
-  const [finResultado, setFinResultado] = useState(null); // "WIN" | "LOSE" | "FLEE" | null
+  const [finResultado, setFinResultado] = useState(null);
   const finProcesadoRef = useRef(false);
 
-  // ===== Aura / Tier ronda =====
   const [auraNivel, setAuraNivel] = useState(0);
   const [tierRonda, setTierRonda] = useState(baseTier);
 
-  // ===== Preguntas =====
   const [preguntasVistas, setPreguntasVistas] = useState([]);
   const [preguntaActual, setPreguntaActual] = useState(null);
   const [opcionSeleccionada, setOpcionSeleccionada] = useState(null);
@@ -115,24 +123,55 @@ export default function CombatePromptRival() {
   const [feedbackTexto, setFeedbackTexto] = useState("");
   const [finMensaje, setFinMensaje] = useState("");
 
-  const [modoPregunta, setModoPregunta] = useState("ATAQUE"); // ATAQUE | DEFENSA
+  const [modoPregunta, setModoPregunta] = useState("ATAQUE");
 
-  // ===== Init =====
+  const estiloBotonBase = useMemo(
+    () => ({
+      width: 270,
+      height: 216,
+      position: "relative",
+      display: "block",
+      padding: 0,
+      transition: "transform 0.15s ease-out",
+      transform: "scale(1)",
+      transformOrigin: "center",
+    }),
+    []
+  );
+
+  const onHoverScale = useCallback((ev, scale) => {
+    if (!ev?.currentTarget) return;
+    ev.currentTarget.style.transform = `scale(${scale})`;
+  }, []);
+
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
 
-    // ✅ reset puntaje del combate al iniciar
     puntajeResetCombate?.();
 
     const cfg = ENEMIGOS_POR_TIER[baseTier] ?? ENEMIGOS_POR_TIER[1];
-    let esc = Number(cfg.escudosPorDefecto || 0);
-    const prob = Number(cfg.probEscudosAdicionales || 0);
-    const add = Number(cfg.escudosAdicionales || 0);
-    if (prob > 0 && Math.random() < prob) esc += add;
 
-    setVidasRival(Math.max(1, Number(cfg.vidas || 1)));
-    setEscudosRival(Math.max(0, esc));
+    let esc = 0;
+    if (Number.isFinite(Number(rivalEscudosProp))) {
+      esc = Math.max(0, Math.floor(Number(rivalEscudosProp)));
+    } else {
+      esc = Number(cfg.escudosPorDefecto || 0);
+      const prob = Number(cfg.probEscudosAdicionales || 0);
+      const add = Number(cfg.escudosAdicionales || 0);
+      if (prob > 0 && Math.random() < prob) esc += add;
+      esc = Math.max(0, Math.floor(esc));
+    }
+
+    let v = 1;
+    if (Number.isFinite(Number(rivalVidasProp))) {
+      v = Math.max(1, Math.floor(Number(rivalVidasProp)));
+    } else {
+      v = Math.max(1, Math.floor(Number(cfg.vidas || 1)));
+    }
+
+    setVidasRival(v);
+    setEscudosRival(esc);
 
     setTurno("JUGADOR");
     setFase("MENU");
@@ -150,9 +189,8 @@ export default function CombatePromptRival() {
 
     setFinResultado(null);
     finProcesadoRef.current = false;
-  }, [baseTier, puntajeResetCombate]);
+  }, [baseTier, rivalVidasProp, rivalEscudosProp, puntajeResetCombate]);
 
-  // ===== Fin automático =====
   useEffect(() => {
     if (fase === "FIN") return;
 
@@ -167,17 +205,14 @@ export default function CombatePromptRival() {
       setTurno("FIN");
       setFase("FIN");
       setFinResultado("WIN");
-      setFinMensaje("¡Ganaste! El rival se quedó sin vidas.");
+      setFinMensaje(`¡Ganaste! ${rivalNombre} se quedó sin vidas.`);
       return;
     }
-  }, [vidasJugador, vidasRival, fase]);
+  }, [vidasJugador, vidasRival, fase, rivalNombre]);
 
-  // ===== Cargar pregunta (filtra global acertadas) =====
   const cargarPregunta = useCallback(
     (tierParaPregunta, modo) => {
       const bancoRaw = getBancoPorTier(tierParaPregunta);
-
-      // ✅ nunca traer preguntas globalmente acertadas
       const banco = bancoRaw.filter((q) => !preguntasAcertadasGlobal.includes(String(q.id)));
 
       if (!banco.length) {
@@ -188,7 +223,6 @@ export default function CombatePromptRival() {
         return;
       }
 
-      // primero intenta no repetir dentro del combate
       const poolSinVistas = banco.filter((q) => !preguntasVistas.includes(q.id));
       const seleccion = pickRandom(poolSinVistas.length ? poolSinVistas : banco);
       if (!seleccion) return;
@@ -203,7 +237,6 @@ export default function CombatePromptRival() {
     [preguntasVistas, preguntasAcertadasGlobal]
   );
 
-  // ===== Daño rival (escudo primero) =====
   const escudosRivalRef = useRef(0);
   useEffect(() => {
     escudosRivalRef.current = escudosRival;
@@ -218,11 +251,13 @@ export default function CombatePromptRival() {
     setVidasRival((v) => Math.max(0, v - d));
   }, []);
 
-  // ===== Menú (jugador) =====
   const reglasAuraActual = useMemo(() => getAuraReglas(auraNivel), [auraNivel]);
   const reglasAuraSiguiente = useMemo(() => getAuraReglas(auraNivel + 1), [auraNivel]);
 
-  const tierRondaSiAtaco = useMemo(() => clampTier(baseTier + (reglasAuraActual.tierBonus || 0)), [baseTier, reglasAuraActual]);
+  const tierRondaSiAtaco = useMemo(
+    () => clampTier(baseTier + (reglasAuraActual.tierBonus || 0)),
+    [baseTier, reglasAuraActual]
+  );
   const tierRondaSiSuboAura = useMemo(
     () => clampTier(baseTier + (reglasAuraSiguiente.tierBonus || 0)),
     [baseTier, reglasAuraSiguiente]
@@ -237,10 +272,8 @@ export default function CombatePromptRival() {
 
   const onAumentarAura = useCallback(() => {
     setAuraNivel((prev) => prev + 1);
-
     const tRonda = tierRondaSiSuboAura;
     setTierRonda(tRonda);
-
     setTurno("RIVAL");
     cargarPregunta(tRonda, "DEFENSA");
   }, [cargarPregunta, tierRondaSiSuboAura]);
@@ -252,7 +285,6 @@ export default function CombatePromptRival() {
     setFinMensaje("Has huido del combate.");
   }, []);
 
-  // ===== Resolver respuesta =====
   const resolverRespuesta = useCallback(() => {
     if (!preguntaActual) return;
     if (opcionSeleccionada === null) return;
@@ -260,21 +292,16 @@ export default function CombatePromptRival() {
     const correcta = opcionSeleccionada === preguntaActual.respuesta;
 
     setFeedbackTitulo(correcta ? "CORRECTO" : "INCORRECTO");
-    setFeedbackTexto(correcta ? preguntaActual.feedbackOk ?? "Respuesta correcta." : preguntaActual.feedbackFail ?? "Respuesta incorrecta.");
+    setFeedbackTexto(
+      correcta ? preguntaActual.feedbackOk ?? "Respuesta correcta." : preguntaActual.feedbackFail ?? "Respuesta incorrecta."
+    );
 
-    // ✅ puntaje por turno usando atkMult (aura)
     const puntosTurno = Math.max(1, Math.floor(Number(reglasAuraActual.atkMult || 1)));
     puntajeAplicarTurno?.({ puntos: puntosTurno, correcto: !!correcta });
 
-    // ✅ si acierta: marcar global (no repetir en el mundo)
-    if (correcta) {
-      preguntaMarcarAcertada?.(preguntaActual.id);
-    } else {
-      // ✅ si falla: aura vuelve a 0
-      setAuraNivel(0);
-    }
+    if (correcta) preguntaMarcarAcertada?.(preguntaActual.id);
+    else setAuraNivel(0);
 
-    // ===== Lógica combate =====
     if (modoPregunta === "ATAQUE") {
       if (correcta) {
         const mult = Math.max(1, Number(reglasAuraActual.atkMult || 1));
@@ -302,7 +329,6 @@ export default function CombatePromptRival() {
     preguntaMarcarAcertada,
   ]);
 
-  // ===== Teclado (S/E/N/A y 1/2/3/4) =====
   useEffect(() => {
     if (fase !== "PREGUNTA") return;
 
@@ -329,13 +355,10 @@ export default function CombatePromptRival() {
 
       ev.preventDefault();
 
-      // doble tecla (misma selección) => confirma
       if (opcionSeleccionada === idx) {
         resolverRespuesta();
         return;
       }
-
-      // cambio => solo selecciona
       setOpcionSeleccionada(idx);
     };
 
@@ -343,7 +366,6 @@ export default function CombatePromptRival() {
     return () => window.removeEventListener("keydown", handler);
   }, [fase, preguntaActual, opcionSeleccionada, resolverRespuesta]);
 
-  // ===== Auto-advance tras feedback =====
   useEffect(() => {
     if (fase !== "FEEDBACK") return;
 
@@ -369,41 +391,27 @@ export default function CombatePromptRival() {
     return () => window.clearTimeout(t);
   }, [fase, feedbackDelayMs, modoPregunta, vidasJugador, vidasRival, cargarPregunta, tierRonda, baseTier]);
 
-  // ===== Procesar FIN (1 sola vez) =====
   useEffect(() => {
     if (fase !== "FIN") return;
     if (finProcesadoRef.current) return;
     finProcesadoRef.current = true;
 
-    // ✅ reglas:
-    // - WIN: suma combateActual al total
-    // - LOSE: descarta combateActual
-    // - FLEE: descarta combateActual
     if (finResultado === "WIN") {
       puntajeCerrarCombateYSumarTotal?.();
       if (origenZonaId) derrotarEnemigo(origenZonaId);
       return;
     }
-
-    // LOSE o FLEE => descartar
     puntajeDescartarCombate?.();
   }, [fase, finResultado, puntajeCerrarCombateYSumarTotal, puntajeDescartarCombate, origenZonaId, derrotarEnemigo]);
 
-  // ===== Salir =====
-  const salir = useCallback(() => {
-    cerrarPlantilla();
-  }, [cerrarPlantilla]);
+  const salir = useCallback(() => cerrarPlantilla(), [cerrarPlantilla]);
 
-  // ===== UI helpers =====
   const textoTurno = useMemo(() => {
     if (fase === "FIN") return "COMBATE FINALIZADO";
     if (turno === "JUGADOR") return "TU TURNO (ATAQUE)";
     return "TURNO RIVAL (DEFENSA)";
   }, [turno, fase]);
 
-  const tierVisibleEnPregunta = useMemo(() => clampTier(tierRonda), [tierRonda]);
-
-  // ===== Helpers clases opciones =====
   const getClaseOpcion = useCallback(
     (idx) => {
       if (!preguntaActual) return "pixel-ui2 combate-option";
@@ -419,67 +427,76 @@ export default function CombatePromptRival() {
     [preguntaActual, opcionSeleccionada, debugActivo]
   );
 
+  // Sprites (100x100, si quieres ahora)
+  const jugadorAspecto = estado.jugador?.aspecto || "DEFAULT";
+  const srcJugador = useMemo(() => selectorDeAspecto(jugadorAspecto, "idle"), [jugadorAspecto]);
+  const animRival = useMemo(() => (fase === "FIN" && finResultado === "WIN" ? "derrotado" : "idle"), [fase, finResultado]);
+  const srcRival = useMemo(() => selectorDeRival(rivalFamilia, baseTier, animRival), [rivalFamilia, baseTier, animRival]);
+
   return (
     <div className="pixel-ui2 combate-overlay">
-      <div className="pixel-ui2 combate-panel">
-        {/* 1) Header / Estados */}
-        <div className="pixel-ui2 combate-header">
-          <div className="pixel-ui2 combate-col">
-            <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
-              JUGADOR
-            </div>
-            <div className="pixel-ui2" style={{ fontSize: 14, fontWeight: 800 }}>
-              Vidas: {vidasJugador} | Escudos: {escudosJugador}
-            </div>
-
-            <div className="pixel-ui2 combate-points">Puntos (combate): {puntajeCombateActual}</div>
-            <div className="pixel-ui2 combate-points-total">Total: {puntajeTotal}</div>
-          </div>
-
-          <div className="pixel-ui2 combate-center">
-            <div className="pixel-ui2 combate-title">{titulo}</div>
-            <div className="pixel-ui2 combate-subtitle">
-              {textoTurno} • Tier rival: {baseTier} • Aura: {auraNivel}{" "}
-              {auraNivel > 0 ? `(Atk x${reglasAuraActual.atkMult} / FailDef x${reglasAuraActual.defFailMult})` : ""}
-              {debugActivo ? " • DEBUG ON" : ""}
-            </div>
-            <div className="pixel-ui2 combate-description">{texto}</div>
-          </div>
-
-          <div className="pixel-ui2 combate-col combate-col--right">
-            <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
-              RIVAL
-            </div>
-            <div className="pixel-ui2" style={{ fontSize: 14, fontWeight: 800 }}>
-              Vidas: {vidasRival} | Escudos: {escudosRival}
-            </div>
-          </div>
-        </div>
-
-        {/* 2) Campo de batalla */}
+      <div
+        className="pixel-ui2 combate-panel"
+        style={{
+          backgroundImage: `url(${bgPanel})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* BATTLEFIELD */}
         <div className="pixel-ui2 combate-battlefield">
-          <div className="pixel-ui2 combate-battle-side" style={{ textAlign: "left" }}>
-            <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
-              TU LADO
+          <div className="pixel-ui2 combate-header">
+            <div className="pixel-ui2 combate-col">
+              <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
+                JUGADOR
+              </div>
+              <div className="pixel-ui2" style={{ fontSize: 14, fontWeight: 800 }}>
+                Vidas: {vidasJugador} | Escudos: {escudosJugador}
+              </div>
+
+              <div className="pixel-ui2 combate-points">Puntos (combate): {puntajeCombateActual}</div>
+              <div className="pixel-ui2 combate-points-total">Total: {puntajeTotal}</div>
             </div>
-            <div className="pixel-ui2" style={{ marginTop: 6, fontSize: 14, opacity: 0.95 }}>
-              (Animación Jugador)
+
+            <div className="pixel-ui2 combate-center">
+              <div className="pixel-ui2 combate-title">{titulo}</div>
+              <div className="pixel-ui2 combate-subtitle">
+                {textoTurno} • Rival: {rivalNombre} • Tier rival: {baseTier} • Aura: {auraNivel}{" "}
+                {auraNivel > 0 ? `(Atk x${reglasAuraActual.atkMult} / FailDef x${reglasAuraActual.defFailMult})` : ""}
+                {debugActivo ? " • DEBUG ON" : ""}
+              </div>
+              <div className="pixel-ui2 combate-description">{texto}</div>
+            </div>
+
+            <div className="pixel-ui2 combate-col combate-col--right">
+              <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
+                {rivalNombre.toUpperCase()}
+              </div>
+              <div className="pixel-ui2" style={{ fontSize: 14, fontWeight: 800 }}>
+                Vidas: {vidasRival} | Escudos: {escudosRival}
+              </div>
             </div>
           </div>
 
-          <div className="pixel-ui2 combate-battle-vs">VS</div>
+          <div className="bt-player in-battle">
+            {srcJugador ? (
+              <img src={srcJugador} alt="" draggable={false} className="combat-sprite" />
+            ) : (
+              <div className="combat-sprite-fallback combat-sprite-fallback--player" />
+            )}
+          </div>
 
-          <div className="pixel-ui2 combate-battle-side" style={{ textAlign: "right" }}>
-            <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
-              LADO RIVAL
-            </div>
-            <div className="pixel-ui2" style={{ marginTop: 6, fontSize: 14, opacity: 0.95 }}>
-              (Animación Rival)
-            </div>
+          <div className="bt-rival in-battle">
+            {srcRival ? (
+              <img src={srcRival} alt="" draggable={false} className="combat-sprite combat-sprite--flip" />
+            ) : (
+              <div className="combat-sprite-fallback combat-sprite-fallback--rival" />
+            )}
           </div>
         </div>
 
-        {/* 3) Acciones / Preguntas */}
+        {/* ACTIONS */}
         <div className="pixel-ui2 combate-actions">
           {/* FIN */}
           {fase === "FIN" && (
@@ -505,41 +522,54 @@ export default function CombatePromptRival() {
           {/* MENU */}
           {fase === "MENU" && turno === "JUGADOR" && (
             <>
-              <div className="pixel-ui2" style={{ fontSize: 13, opacity: 0.92, marginBottom: 10 }}>
-                Elige una acción:
+              <div className="pixel-ui2 combate-top-title">
+                <h2>Elige una acción:</h2>
               </div>
 
-              <div className="pixel-ui2 combate-grid-2">
-                <button className="pixel-ui2 combate-btn" onClick={onAtacar}>
-                  Atacar
-                  <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontWeight: 600 }}>
+              <div className="pixel-ui2 combate-menu-row">
+                <button
+                  className="pixel-ui2 combate-btn"
+                  onClick={onAtacar}
+                  style={estiloBotonBase}
+                  onMouseEnter={(e) => onHoverScale(e, 1.02)}
+                  onMouseLeave={(e) => onHoverScale(e, 1)}
+                >
+                  <div className="pixel-ui2 combate-btn-sub">
                     Tier ronda: {tierRondaSiAtaco}
                     {auraNivel > 0 ? ` • Golpe x${reglasAuraActual.atkMult}` : ""}
                   </div>
+                  <div className="pixel-ui2 combate-btn-title">Iniciar Ataque</div>
                 </button>
 
-                <button className="pixel-ui2 combate-btn combate-btn--aura" onClick={onAumentarAura}>
-                  Aumentar Aura
-                  <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.88, marginTop: 4, fontWeight: 700 }}>
-                    Aura: {auraNivel} ▶ {auraNivel + 1}
-                  </div>
-                  <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85, marginTop: 2, fontWeight: 600 }}>
-                    Tier: {tierRondaSiAtaco} ▶ {tierRondaSiSuboAura} • (Saltas ataque)
-                  </div>
+                <button
+                  className="pixel-ui2 combate-btn combate-btn--aura"
+                  onClick={onAumentarAura}
+                  style={estiloBotonBase}
+                  onMouseEnter={(e) => onHoverScale(e, 1.02)}
+                  onMouseLeave={(e) => onHoverScale(e, 1)}
+                >
+                  <div className="pixel-ui2 combate-btn-sub">Aura: {auraNivel} ▶ {auraNivel + 1}</div>
+                  <div className="pixel-ui2 combate-btn-title">Aura</div>
                 </button>
 
-                <button className="pixel-ui2 combate-btn combate-btn--disabled" disabled>
-                  Inventario
-                  <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.75, marginTop: 4, fontWeight: 600 }}>
-                    (Próximamente)
-                  </div>
+                <button
+                  className="pixel-ui2 combate-btn combate-btn--disabled"
+                  disabled
+                  style={{ ...estiloBotonBase, cursor: "not-allowed" }}
+                >
+                  <div className="pixel-ui2 combate-btn-sub">(Próximamente)</div>
+                  <div className="pixel-ui2 combate-btn-title">Inventario</div>
                 </button>
 
-                <button className="pixel-ui2 combate-btn combate-btn--flee" onClick={onHuir}>
-                  Huir
-                  <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontWeight: 600 }}>
-                    Abandonas el combate (descarta puntos).
-                  </div>
+                <button
+                  className="pixel-ui2 combate-btn combate-btn--flee"
+                  onClick={onHuir}
+                  style={estiloBotonBase}
+                  onMouseEnter={(e) => onHoverScale(e, 1.02)}
+                  onMouseLeave={(e) => onHoverScale(e, 1)}
+                >
+                  <div className="pixel-ui2 combate-btn-sub">Abandonas el combate</div>
+                  <div className="pixel-ui2 combate-btn-title">Huir</div>
                 </button>
               </div>
             </>
@@ -548,31 +578,22 @@ export default function CombatePromptRival() {
           {/* PREGUNTA */}
           {fase === "PREGUNTA" && (
             <>
-              <div className="pixel-ui2" style={{ fontSize: 13, opacity: 0.92, marginBottom: 8 }}>
-                {modoPregunta === "ATAQUE"
-                  ? `ATAQUE • Tier actual: ${tierVisibleEnPregunta} • Si aciertas golpeas${
-                      auraNivel > 0 ? ` x${reglasAuraActual.atkMult}` : ""
-                    }.`
-                  : `DEFENSA • Tier actual: ${tierVisibleEnPregunta} • Si fallas recibes daño${
-                      auraNivel > 0 ? ` x${reglasAuraActual.defFailMult}` : ""
-                    }.`}
-              </div>
-
               {preguntaActual ? (
                 <>
-                  <div className="pixel-ui2" style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.35 }}>
-                    {preguntaActual.pregunta}
+                  <div className="pixel-ui2 combate-question">
+                    <h2>{preguntaActual.pregunta}</h2>
                   </div>
 
                   <div className="pixel-ui2 combate-options">
                     {preguntaActual.opciones.map((op, idx) => {
                       const sigla = TECLAS_OPCION[idx] ?? "?";
-
                       return (
                         <button key={idx} className={getClaseOpcion(idx)} onClick={() => setOpcionSeleccionada(idx)}>
                           <div className="pixel-ui2 combate-option-inner">
                             <div className="pixel-ui2 combate-option-letter">{sigla}:</div>
-                            <div className="pixel-ui2 combate-option-text">{op}</div>
+                            <div className="pixel-ui2 combate-option-text">
+                              <p className="text-options">{op}</p>
+                            </div>
                           </div>
                         </button>
                       );
@@ -581,20 +602,14 @@ export default function CombatePromptRival() {
 
                   <div className="pixel-ui2 combate-btn-row">
                     <button
-                      className={`pixel-ui2 combate-btn combate-btn-wide ${opcionSeleccionada === null ? "combate-btn--disabled" : ""}`}
+                      className={`pixel-ui2 combate-btn combate-btn-wide ${
+                        opcionSeleccionada === null ? "combate-btn--disabled" : ""
+                      }`}
                       onClick={resolverRespuesta}
                       disabled={opcionSeleccionada === null}
                     >
                       Confirmar
                     </button>
-
-                    <button className="pixel-ui2 combate-btn combate-btn--flee" onClick={onHuir} style={{ minWidth: 120 }}>
-                      Huir
-                    </button>
-                  </div>
-
-                  <div className="pixel-ui2 combate-hint">
-                    Atajos: S/E/N/A o 1/2/3/4 • Presiona la misma tecla dos veces para confirmar
                   </div>
                 </>
               ) : (

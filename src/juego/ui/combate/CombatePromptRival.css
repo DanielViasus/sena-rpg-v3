@@ -12,32 +12,70 @@
   pointer-events: auto;
 }
 
-/* ✅ PANEL: 1200 x 800 por defecto + responsive */
+/* PANEL: aquí va el fondo (imagen o fallback) */
 .combate-panel {
   width: 1200px;
   height: 800px;
-
   max-width: 95vw;
   max-height: 92vh;
 
   border: 2px solid rgba(255, 255, 255, 0.35);
-  background: rgba(20, 20, 20, 0.94);
   border-radius: 12px;
   color: #fff;
 
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  /* base (por si acaso) */
+  background-color: rgba(20, 20, 20, 0.94);
 }
 
-/* HEADER */
+/* cuando el bg carga */
+.combate-panel--bg {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+/* cuando NO hay bg o falla */
+.combate-panel--fallback {
+  background: linear-gradient(180deg, rgba(18, 18, 24, 0.96), rgba(10, 10, 14, 0.96));
+}
+
+/* CAMPO DE BATALLA */
+.combate-battlefield {
+  margin: 10px 14px 0;
+  height: 280px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+
+  position: relative;
+  overflow: hidden;
+}
+
+/* HEADER encima del battlefield */
 .combate-header {
-  padding: 14px;
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: calc(100% - 24px);
+  padding: 12px;
+
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
-  flex: 0 0 auto;
+
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
 }
 
 .combate-col {
@@ -82,37 +120,30 @@
   opacity: 0.75;
 }
 
-/* ✅ CAMPO DE BATALLA (ajustable) */
-.combate-battlefield {
-  margin: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 12px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  /* ocupa el espacio restante */
-  flex: 1 1 auto;
-  min-height: 120px;
-  overflow: hidden;
+/* Sprites */
+.in-battle {
+  position: absolute;
+  bottom: 12px;
+  width: 100px;   /* ✅ 100x100 */
+  height: 100px;  /* ✅ 100x100 */
+  pointer-events: none;
 }
 
-.combate-battle-side {
-  width: 45%;
+.bt-player { left: 10%; }
+.bt-rival  { right: 10%; }
+
+.combat-sprite {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
-.combate-battle-vs {
-  width: 10%;
-  text-align: center;
-  opacity: 0.7;
-  font-size: 12px;
+.combat-sprite--flip {
+  transform: scaleX(-1);
 }
 
-/* ✅ ACCIONES ABAJO (FIJO 450px) */
+/* ACCIONES */
 .combate-actions {
   margin: 12px 14px 14px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -120,18 +151,11 @@
   background: rgba(0, 0, 0, 0.25);
   padding: 12px;
 
-  flex: 0 0 450px;
-  height: 450px;
+  flex: 1 1 auto;
   overflow: auto;
 }
 
-/* Layouts internos */
-.combate-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
+/* Botones */
 .combate-btn-row {
   display: flex;
   gap: 10px;
@@ -141,15 +165,9 @@
 .combate-btn-wide {
   flex: 1;
   padding: 10px 12px;
+  height: 50px;
 }
 
-.combate-hint {
-  margin-top: 8px;
-  font-size: 12px;
-  opacity: 0.75;
-}
-
-/* Botones */
 .combate-btn {
   cursor: pointer;
   padding: 12px 12px;
@@ -175,7 +193,53 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
-/* Opciones pregunta */
+/* Menu layout */
+.combate-top-title {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.combate-menu-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: wrap; /* más seguro en pantallas pequeñas */
+}
+
+.combate-btn-sub {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 48px;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.85;
+  font-weight: 700;
+}
+
+.combate-btn-title {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+/* Pregunta */
+.combate-question {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Opciones */
 .combate-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -215,11 +279,10 @@
 }
 
 .combate-option-letter {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
-  line-height: 1;
-  width: 62px;
-  text-align: left;
+  width: 44px;
+  text-align: center;
   opacity: 0.95;
 }
 
@@ -229,7 +292,11 @@
   flex: 1;
 }
 
-/* ✅ Responsive: simplificamos layout en pantallas pequeñas */
+.text-options {
+  margin: 0;
+}
+
+/* Responsive */
 @media (max-width: 720px) {
   .combate-panel {
     width: 95vw;
@@ -249,24 +316,10 @@
     text-align: left;
   }
 
-  .combate-grid-2,
   .combate-options {
     grid-template-columns: 1fr;
   }
 
-  .combate-battlefield {
-    flex-direction: column;
-  }
-
-  .combate-battle-side,
-  .combate-battle-vs {
-    width: 100%;
-    text-align: center;
-  }
-
-  /* En móvil, mantiene 450px si cabe; si no, que se adapte por scroll del panel */
-  .combate-actions {
-    flex: 0 0 450px;
-    height: 450px;
-  }
+  .bt-player { left: 6%; }
+  .bt-rival  { right: 6%; }
 }

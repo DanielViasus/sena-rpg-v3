@@ -1,0 +1,219 @@
+/* src/ui/combate/cajas/CajaMenuAccion.css */
+
+.cma-root {
+  /* Desktop exacto */
+  width: 1166px;
+  height: 352px;
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* Fondo */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Header (1142 x 100) */
+.cma-header {
+  width: 1142px;
+  height: 100px;
+  margin-top: 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* SOLO imagen BG */
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+  
+}
+
+.cma-headerText {
+  font-size: 32px;
+  font-weight: 900;
+  text-align: center;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.5);
+  letter-spacing: 5px;
+}
+
+/* Grid desktop: 4 columnas */
+.cma-grid {
+  width: 1142px;
+  height: 216px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 270px);
+  gap: 16px;
+
+  justify-content: center;
+  align-items: center;
+}
+
+/* Botón base: 270 x 216 */
+.cma-btn {
+  width: 270px;
+  height: 216px;
+  background-color: rgba(0, 0, 0, 0);
+
+  /* ✅ margen inferior pedido */
+  margin-bottom: 16px;
+  
+
+  border: none;
+  outline: none;
+
+  /* BG SVG por botón (se inyecta inline en JSX) */
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+
+  
+  cursor: pointer;
+
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+
+  /* Para controlar layout interno con posiciones absolutas */
+  display: block;
+
+  transform: scale(1);
+  transition: transform 140ms ease, opacity 140ms ease;
+  will-change: transform, opacity;
+}
+
+.cma-btn:not(:disabled):hover {
+  transform: scale(1.05);
+}
+
+
+
+/* Icono arriba (100x100 centrado) */
+.cma-icon {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Subtexto: bajado un poco para mejor lectura */
+.cma-sub {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+
+  /* antes 80px -> ahora 72px (más abajo) */
+  bottom: 72px;
+
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+/* Título: a 32px del bottom */
+.cma-title {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 32px;
+  text-align: center;
+
+  font-size: 20px;
+  font-weight: 1000;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+/* Disabled */
+.cma-btn--disabled {
+  filter: grayscale(100%);
+  cursor: not-allowed;
+}
+
+/* =========================
+   RESPONSIVE
+   - Mantener desktop cuando cabe
+   - En móvil: TODO VERTICAL (sin grilla)
+   ========================= */
+
+/* Ajuste general cuando no cabe el panel */
+@media (max-width: 1240px) {
+  .cma-root {
+    width: calc(100vw - 24px);
+    height: auto;
+  }
+
+  .cma-header,
+  .cma-grid {
+    width: 100%;
+  }
+
+  .cma-grid {
+    height: auto;
+    margin-top: 16px;
+  }
+}
+
+/* ✅ MODO TOTALMENTE VERTICAL */
+@media (max-width: 720px) {
+  .cma-headerText {
+    font-size: 24px;
+  }
+
+  .cma-grid {
+    display: flex;           /* se desaparece la grilla */
+    flex-direction: column;  /* botones vertical */
+    gap: 12px;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .cma-btn {
+    width: 100%;
+    height: 140px;
+    /* mantiene margin-bottom:16px */
+  }
+
+  .cma-icon {
+    top: 50%;
+    left: 24px;
+    transform: translateY(-50%);
+    width: 100px;
+    height: 100px;
+  }
+
+  /* En vertical, textos a la derecha del icono */
+  .cma-sub {
+    left: 140px;
+    right: 16px;
+
+    /* antes 58px -> ahora 52px (más abajo) */
+    bottom: 52px;
+
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .cma-title {
+    left: 140px;
+    right: 16px;
+    bottom: 24px;
+    text-align: left;
+    font-size: 18px;
+  }
+}

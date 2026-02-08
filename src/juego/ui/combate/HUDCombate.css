@@ -1,0 +1,156 @@
+/* src/ui/combate/HUDCombate.css */
+
+.hudC-root {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(96%, 1120px);
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  z-index: 20;
+  pointer-events: none; /* HUD no bloquea clicks */
+}
+
+.hudC-card {
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+
+  min-width: 360px;
+  max-width: 520px;
+}
+
+.hudC-card--player {
+  justify-content: flex-start;
+}
+
+.hudC-card--rival {
+  justify-content: flex-end;
+}
+
+.hudC-avatarBox {
+  width: 74px;
+  height: 74px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+
+.hudC-avatarViewport {
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.hudC-avatarSkin {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+
+  transform: translate(var(--zoomX), var(--zoomY)) scale(var(--zoom));
+  transform-origin: center;
+}
+
+.hudC-avatarSkin--flip {
+  transform: translate(var(--zoomX), var(--zoomY)) scale(var(--zoom)) scaleX(-1);
+}
+
+.hudC-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+
+.hudC-fallback--player {
+  background: rgba(0, 180, 255, 0.35);
+}
+
+.hudC-fallback--rival {
+  background: rgba(255, 80, 80, 0.35);
+}
+
+.hudC-infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hudC-infoCol--right {
+  align-items: flex-end;
+}
+
+.hudC-nombre {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 380px;
+}
+
+.hudC-nombre--right {
+  text-align: right;
+}
+
+.hudC-filaIconos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hudC-filaIconos--right {
+  justify-content: flex-end;
+}
+
+.hudC-icono {
+  width: var(--hud-icon-size);
+  height: var(--hud-icon-size);
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+}
+
+.hudC-separador {
+  width: 1px;
+  height: calc(var(--hud-icon-size) + 2px);
+  background: rgba(255, 255, 255, 0.25);
+  margin: 0 4px;
+}
+
+@media (max-width: 860px) {
+  .hudC-root {
+    top: 8px;
+    width: 96%;
+    gap: 10px;
+  }
+
+  .hudC-card {
+    min-width: 280px;
+    padding: 8px 10px;
+  }
+
+  .hudC-nombre {
+    max-width: 240px;
+  }
+}

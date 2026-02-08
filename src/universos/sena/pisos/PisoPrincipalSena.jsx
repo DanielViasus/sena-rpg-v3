@@ -5,8 +5,7 @@ import fondo from "../../../assets/svg/fondos/bgSalonDeClases1491x1609.svg";
 
 
 import Rival from "../../../juego/personajes/rival/Rival.jsx";
-import rivalCalavera from "../../../assets/gif/personajes/rivales/gifRival_128x128_180ms.webp";
-import rivalCalaveraDerrorada from "../../../assets/gif/personajes/rivales/derrotaRival4.svg";
+
 
 
 import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
