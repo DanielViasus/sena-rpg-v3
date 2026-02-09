@@ -34,6 +34,9 @@ const AURA_REGLAS = {
 
 const TECLAS_OPCION = ["S", "E", "N", "A"];
 
+// ✅ debe coincidir con tu CSS (1.5s)
+const ATTACK_ANIM_MS = 1500;
+
 function clampTier(t) {
   const n = Number(t);
   if (!Number.isFinite(n)) return 1;
@@ -80,20 +83,15 @@ export default function CombatePromptRival() {
   const estado = useEstadoJuego();
   const acciones = useAccionesJuego();
 
-  // ⚠️ NO retornes antes de hooks
   const plantilla = estado.ui?.plantillaActiva;
   const combateActivo = !!plantilla && plantilla.id === "COMBATE_RIVAL";
 
-  // Props del combate (si no hay combate, valores seguros)
   const origenZonaId = combateActivo ? plantilla.origenZonaId : null;
   const props = combateActivo ? plantilla.props || {} : {};
 
   const rivalNombre = String(props.rivalNombre ?? "").trim() || "RIVAL";
   const rivalTierProp = props.rivalTier ?? props.tier ?? 1;
-
-  // ✅ OJO: ignoramos rivalVidasProp (ya NO se usa)
   const rivalEscudosProp = props.rivalEscudos;
-
   const rivalFamilia = String(props.rivalFamilia ?? props.familia ?? "CALAVERA").trim() || "CALAVERA";
 
   const titulo = props.titulo ?? "COMBATE";
@@ -139,7 +137,12 @@ export default function CombatePromptRival() {
 
   const [modoPregunta, setModoPregunta] = useState("ATAQUE");
 
-  // ✅ combateKey YA NO depende de rivalVidasProp
+  // ✅ candado visual
+  const [animGolpeEnCurso, setAnimGolpeEnCurso] = useState(false);
+
+  // ✅ NUEVO: si el golpe es LETAL, programamos el FIN desde resolverRespuesta
+  const pendingFinRef = useRef(null); // { tipo: "WIN"|"LOSE", mensaje: string, timeoutId: number|null }
+
   const combateKey = useMemo(() => {
     return [
       String(origenZonaId ?? ""),
@@ -155,7 +158,7 @@ export default function CombatePromptRival() {
     ev.currentTarget.style.transform = `scale(${scale})`;
   }, []);
 
-  // ✅ Inicialización SOLO cuando el combate está activo
+  // ✅ Inicialización
   useEffect(() => {
     if (!combateActivo) return;
 
@@ -163,7 +166,6 @@ export default function CombatePromptRival() {
 
     const cfg = ENEMIGOS_POR_TIER[baseTier] ?? ENEMIGOS_POR_TIER[1];
 
-    // ✅ escudos: si props trae número, se respeta; si no, regla por tier
     let esc = 0;
     if (Number.isFinite(Number(rivalEscudosProp))) {
       esc = Math.max(0, Math.floor(Number(rivalEscudosProp)));
@@ -175,7 +177,6 @@ export default function CombatePromptRival() {
       esc = Math.max(0, Math.floor(esc));
     }
 
-    // ✅ VIDAS: SIEMPRE por tier (ignorar props.rivalVidas)
     const v = Math.max(1, Math.floor(Number(cfg.vidas || 1)));
 
     setVidasRival(v);
@@ -198,11 +199,53 @@ export default function CombatePromptRival() {
 
     setFinResultado(null);
     finProcesadoRef.current = false;
+
+    setAnimGolpeEnCurso(false);
+
+    // limpiar fin pendiente anterior
+    if (pendingFinRef.current?.timeoutId) window.clearTimeout(pendingFinRef.current.timeoutId);
+    pendingFinRef.current = null;
   }, [combateActivo, combateKey, baseTier, rivalEscudosProp, acciones]);
 
+  // refs para escudos rival
+  const escudosRivalRef = useRef(0);
+  useEffect(() => {
+    escudosRivalRef.current = escudosRival;
+  }, [escudosRival]);
+
+  const aplicarGolpeRival = useCallback((danio) => {
+    const d = Math.max(1, Number(danio || 1));
+    if (escudosRivalRef.current > 0) {
+      setEscudosRival((e) => Math.max(0, e - 1));
+      return;
+    }
+    setVidasRival((v) => Math.max(0, v - d));
+  }, []);
+
+  // ✅ si entramos a FEEDBACK, activamos “golpe en curso”
+  useEffect(() => {
+    if (!combateActivo) return;
+
+    if (fase !== "FEEDBACK") {
+      setAnimGolpeEnCurso(false);
+      return;
+    }
+
+    setAnimGolpeEnCurso(true);
+    const t = window.setTimeout(() => setAnimGolpeEnCurso(false), ATTACK_ANIM_MS);
+    return () => window.clearTimeout(t);
+  }, [combateActivo, fase]);
+
+  // ✅ FIN automático (pero NO si hay FIN programado por golpe letal, ni si el golpe está corriendo)
   useEffect(() => {
     if (!combateActivo) return;
     if (fase === "FIN") return;
+
+    // si resolverRespuesta ya programó un FIN (para mostrar el último dash), no interferimos
+    if (pendingFinRef.current) return;
+
+    // si estamos en FEEDBACK y el dash está corriendo, no cortamos
+    if (fase === "FEEDBACK" && animGolpeEnCurso) return;
 
     if (vidasJugador <= 0) {
       setTurno("FIN");
@@ -218,7 +261,7 @@ export default function CombatePromptRival() {
       setFinMensaje(`¡Ganaste! ${rivalNombre} se quedó sin vidas.`);
       return;
     }
-  }, [combateActivo, vidasJugador, vidasRival, fase, rivalNombre]);
+  }, [combateActivo, vidasJugador, vidasRival, fase, rivalNombre, animGolpeEnCurso]);
 
   const cargarPregunta = useCallback(
     (tierParaPregunta, modo) => {
@@ -248,20 +291,6 @@ export default function CombatePromptRival() {
     },
     [combateActivo, preguntasVistas, preguntasAcertadasGlobal]
   );
-
-  const escudosRivalRef = useRef(0);
-  useEffect(() => {
-    escudosRivalRef.current = escudosRival;
-  }, [escudosRival]);
-
-  const aplicarGolpeRival = useCallback((danio) => {
-    const d = Math.max(1, Number(danio || 1));
-    if (escudosRivalRef.current > 0) {
-      setEscudosRival((e) => Math.max(0, e - 1));
-      return;
-    }
-    setVidasRival((v) => Math.max(0, v - d));
-  }, []);
 
   const reglasAuraActual = useMemo(() => getAuraReglas(auraNivel), [auraNivel]);
   const reglasAuraSiguiente = useMemo(() => getAuraReglas(auraNivel + 1), [auraNivel]);
@@ -297,6 +326,22 @@ export default function CombatePromptRival() {
     setFinMensaje("Has huido del combate.");
   }, []);
 
+  // ✅ helper: programa fin después del dash final
+  const programarFin = useCallback((tipo, mensaje) => {
+    // limpiar si existía
+    if (pendingFinRef.current?.timeoutId) window.clearTimeout(pendingFinRef.current.timeoutId);
+
+    const timeoutId = window.setTimeout(() => {
+      setTurno("FIN");
+      setFase("FIN");
+      setFinResultado(tipo);
+      setFinMensaje(mensaje);
+      pendingFinRef.current = null;
+    }, ATTACK_ANIM_MS);
+
+    pendingFinRef.current = { tipo, mensaje, timeoutId };
+  }, []);
+
   const resolverRespuesta = useCallback(() => {
     if (!combateActivo) return;
     if (!preguntaActual) return;
@@ -317,9 +362,22 @@ export default function CombatePromptRival() {
     if (correcta) acciones?.preguntaMarcarAcertada?.(preguntaActual.id);
     else setAuraNivel(0);
 
+    // ✅ PRE-CÁLCULO LETAL (para no cortar el último dash)
+    let seraWin = false;
+    let seraLose = false;
+
     if (modoPregunta === "ATAQUE") {
       if (correcta) {
         const mult = Math.max(1, Number(reglasAuraActual.atkMult || 1));
+
+        // si hay escudo, NO baja vida (no es letal por vida)
+        if (escudosRivalRef.current > 0) {
+          seraWin = false;
+        } else {
+          const proyectado = Math.max(0, Number(vidasRival) - 1 * mult);
+          if (proyectado <= 0) seraWin = true;
+        }
+
         aplicarGolpeRival(1 * mult);
       }
     }
@@ -327,11 +385,27 @@ export default function CombatePromptRival() {
     if (modoPregunta === "DEFENSA") {
       if (!correcta) {
         const mult = Math.max(1, Number(reglasAuraActual.defFailMult || 1));
-        acciones?.jugadorRecibirDanio?.(danioPerderBase * mult);
+        const danio = danioPerderBase * mult;
+
+        const proyectadoJugador = Math.max(0, Number(vidasJugador) - danio);
+        if (proyectadoJugador <= 0) seraLose = true;
+
+        acciones?.jugadorRecibirDanio?.(danio);
       }
     }
 
+    // ✅ entramos a FEEDBACK sí o sí (esto dispara el dash)
     setFase("FEEDBACK");
+
+    // ✅ si es golpe final, PROGRAMAMOS el FIN después del dash
+    if (seraWin) {
+      programarFin("WIN", `¡Ganaste! ${rivalNombre} se quedó sin vidas.`);
+      return;
+    }
+    if (seraLose) {
+      programarFin("LOSE", "Has perdido: tus vidas llegaron a 0.");
+      return;
+    }
   }, [
     combateActivo,
     preguntaActual,
@@ -341,8 +415,13 @@ export default function CombatePromptRival() {
     aplicarGolpeRival,
     danioPerderBase,
     acciones,
+    vidasRival,
+    vidasJugador,
+    rivalNombre,
+    programarFin,
   ]);
 
+  // teclado opciones
   useEffect(() => {
     if (!combateActivo) return;
     if (fase !== "PREGUNTA") return;
@@ -381,9 +460,13 @@ export default function CombatePromptRival() {
     return () => window.removeEventListener("keydown", handler);
   }, [combateActivo, fase, preguntaActual, opcionSeleccionada, resolverRespuesta]);
 
+  // ✅ avance automático tras FEEDBACK (pero NO si hay FIN programado)
   useEffect(() => {
     if (!combateActivo) return;
     if (fase !== "FEEDBACK") return;
+
+    // si hay fin pendiente, NO avanzamos de fase (dejamos que el timeout haga FIN)
+    if (pendingFinRef.current) return;
 
     const t = window.setTimeout(() => {
       if (vidasJugador <= 0 || vidasRival <= 0) return;
@@ -417,6 +500,7 @@ export default function CombatePromptRival() {
     baseTier,
   ]);
 
+  // procesar puntaje al fin
   useEffect(() => {
     if (!combateActivo) return;
     if (fase !== "FIN") return;
@@ -455,7 +539,10 @@ export default function CombatePromptRival() {
 
   // Sprites
   const srcJugador = useMemo(() => selectorDeAspecto(jugadorAspecto, "idle"), [jugadorAspecto]);
-  const animRival = useMemo(() => (fase === "FIN" && finResultado === "WIN" ? "derrotado" : "idle"), [fase, finResultado]);
+  const animRival = useMemo(
+    () => (fase === "FIN" && finResultado === "WIN" ? "derrotado" : "idle"),
+    [fase, finResultado]
+  );
   const srcRival = useMemo(() => selectorDeRival(rivalFamilia, baseTier, animRival), [rivalFamilia, baseTier, animRival]);
 
   // HUD iconos
@@ -528,18 +615,13 @@ export default function CombatePromptRival() {
     pointerEvents: "none",
   });
 
-  const zoomJugador = 1.35,
-    zoomXJugador = 0,
-    zoomYJugador = -4;
-  const zoomRival = 1.35,
-    zoomXRival = 0,
-    zoomYRival = -4;
+  const zoomJugador = 1.35, zoomXJugador = 0, zoomYJugador = -4;
+  const zoomRival = 1.35, zoomXRival = 0, zoomYRival = -4;
 
-  // ✅ Layout nuevo de botones (inline para no tocar CSS)
   const actionsGridStyle = useMemo(
     () => ({
       width: "100%",
-      maxWidth: 1166, // tu contenedor objetivo
+      maxWidth: 1166,
       marginInline: "auto",
       display: "grid",
       gridTemplateColumns: "repeat(3, 1fr)",
@@ -550,11 +632,10 @@ export default function CombatePromptRival() {
     []
   );
 
-  // Botón base adaptativo (se estira por grid)
   const btnCardBase = useMemo(
     () => ({
       width: "100%",
-      minHeight: 170, // se ajusta al espacio (antes 216 fijo)
+      minHeight: 170,
       position: "relative",
       display: "flex",
       flexDirection: "column",
@@ -581,29 +662,19 @@ export default function CombatePromptRival() {
   );
 
   const titleStyle = useMemo(
-    () => ({
-      fontSize: 22, // ✅ más grande
-      fontWeight: 900,
-      marginBottom: 24,
-      textAlign: "center",
-      ...textStroke,
-    }),
+    () => ({ fontSize: 22, fontWeight: 900, marginBottom: 24, textAlign: "center", ...textStroke }),
     [textStroke]
   );
-
   const subStyle = useMemo(
-    () => ({
-      fontSize: 16, // ✅ más grande
-      opacity: 0.95,
-      marginBottom: 10,
-      textAlign: "center",
-      ...textStroke,
-    }),
+    () => ({ fontSize: 16, opacity: 0.95, marginBottom: 10, textAlign: "center", ...textStroke }),
     [textStroke]
   );
 
-  // ✅ render condicional AL FINAL
   if (!combateActivo) return null;
+
+  const isFeedback = fase === "FEEDBACK";
+  const playerAtaca = isFeedback && modoPregunta === "ATAQUE";
+  const rivalAtaca = isFeedback && modoPregunta === "DEFENSA";
 
   return (
     <div className="pixel-ui2 combate-overlay">
@@ -617,24 +688,13 @@ export default function CombatePromptRival() {
         }}
       >
         <div className="pixel-ui2 combate-battlefield">
-          <div
-            className="pixel-ui2 combate-header"
-            style={{ background: "transparent", border: "none", boxShadow: "none" }}
-          >
+          <div className="pixel-ui2 combate-header" style={{ background: "transparent", border: "none", boxShadow: "none" }}>
             {/* JUGADOR */}
-            <div
-              className="pixel-ui2 combate-col"
-              style={{ display: "flex", alignItems: "flex-start", background: "transparent" }}
-            >
+            <div className="pixel-ui2 combate-col" style={{ display: "flex", alignItems: "flex-start", background: "transparent" }}>
               <div style={portraitBoxStyle("left")}>
                 <div style={portraitViewportStyle}>
                   {srcJugador ? (
-                    <img
-                      src={srcJugador}
-                      alt=""
-                      draggable={false}
-                      style={portraitImgStyle(zoomJugador, zoomXJugador, zoomYJugador)}
-                    />
+                    <img src={srcJugador} alt="" draggable={false} style={portraitImgStyle(zoomJugador, zoomXJugador, zoomYJugador)} />
                   ) : (
                     <div style={{ width: 36, height: 36, opacity: 0.3, border: "1px solid rgba(255,255,255,0.35)" }} />
                   )}
@@ -648,13 +708,7 @@ export default function CombatePromptRival() {
 
                 <div style={hudFilaStyle} aria-label="hud-jugador">
                   {corazonesJugador.map((c, idx) => (
-                    <img
-                      key={`p-hp-${idx}-${c.tipo}`}
-                      src={c.src}
-                      alt={`vida-${c.tipo}`}
-                      draggable={false}
-                      style={iconStyle}
-                    />
+                    <img key={`p-hp-${idx}-${c.tipo}`} src={c.src} alt={`vida-${c.tipo}`} draggable={false} style={iconStyle} />
                   ))}
                   {escudosJugadorArr.length > 0 && <div style={separadorStyle} />}
                   {escudosJugadorArr.map((i) => (
@@ -691,13 +745,7 @@ export default function CombatePromptRival() {
 
                 <div style={{ ...hudFilaStyle, justifyContent: "flex-end" }} aria-label="hud-rival">
                   {corazonesRival.map((c, idx) => (
-                    <img
-                      key={`r-hp-${idx}-${c.tipo}`}
-                      src={c.src}
-                      alt={`vida-${c.tipo}`}
-                      draggable={false}
-                      style={iconStyle}
-                    />
+                    <img key={`r-hp-${idx}-${c.tipo}`} src={c.src} alt={`vida-${c.tipo}`} draggable={false} style={iconStyle} />
                   ))}
                   {escudosRivalArr.length > 0 && <div style={separadorStyle} />}
                   {escudosRivalArr.map((i) => (
@@ -709,12 +757,7 @@ export default function CombatePromptRival() {
               <div style={portraitBoxStyle("right")}>
                 <div style={portraitViewportStyle}>
                   {srcRival ? (
-                    <img
-                      src={srcRival}
-                      alt=""
-                      draggable={false}
-                      style={portraitImgStyle(zoomRival, zoomXRival, zoomYRival)}
-                    />
+                    <img src={srcRival} alt="" draggable={false} style={portraitImgStyle(zoomRival, zoomXRival, zoomYRival)} />
                   ) : (
                     <div style={{ width: 36, height: 36, opacity: 0.3, border: "1px solid rgba(255,255,255,0.35)" }} />
                   )}
@@ -723,20 +766,12 @@ export default function CombatePromptRival() {
             </div>
           </div>
 
-          <div className="bt-player in-battle">
-            {srcJugador ? (
-              <img src={srcJugador} alt="" draggable={false} className="combat-sprite" />
-            ) : (
-              <div className="combat-sprite-fallback combat-sprite-fallback--player" />
-            )}
+          <div className={`bt-player in-battle ${playerAtaca ? "bt-attack-player" : ""}`}>
+            {srcJugador ? <img src={srcJugador} alt="" draggable={false} className="combat-sprite" /> : <div className="combat-sprite-fallback combat-sprite-fallback--player" />}
           </div>
 
-          <div className="bt-rival in-battle">
-            {srcRival ? (
-              <img src={srcRival} alt="" draggable={false} className="combat-sprite combat-sprite--flip" />
-            ) : (
-              <div className="combat-sprite-fallback combat-sprite-fallback--rival" />
-            )}
+          <div className={`bt-rival in-battle ${rivalAtaca ? "bt-attack-rival" : ""}`}>
+            {srcRival ? <img src={srcRival} alt="" draggable={false} className="combat-sprite combat-sprite--flip" /> : <div className="combat-sprite-fallback combat-sprite-fallback--rival" />}
           </div>
         </div>
 
@@ -764,9 +799,7 @@ export default function CombatePromptRival() {
                 <h2>Elige una acción:</h2>
               </div>
 
-              {/* ✅ NUEVO LAYOUT: 3 arriba + huir abajo full */}
               <div style={actionsGridStyle}>
-                {/* INICIAR ATAQUE */}
                 <button
                   className="pixel-ui2 combate-btn"
                   onClick={onAtacar}
@@ -783,7 +816,6 @@ export default function CombatePromptRival() {
                   </div>
                 </button>
 
-                {/* AURA */}
                 <button
                   className="pixel-ui2 combate-btn combate-btn--aura"
                   onClick={onAumentarAura}
@@ -799,12 +831,7 @@ export default function CombatePromptRival() {
                   </div>
                 </button>
 
-                {/* INVENTARIO */}
-                <button
-                  className="pixel-ui2 combate-btn combate-btn--disabled"
-                  disabled
-                  style={{ ...btnCardBase, cursor: "not-allowed" }}
-                >
+                <button className="pixel-ui2 combate-btn combate-btn--disabled" disabled style={{ ...btnCardBase, cursor: "not-allowed" }}>
                   <div className="pixel-ui2 combate-btn-sub" style={subStyle}>
                     (Próximamente)
                   </div>
@@ -813,7 +840,6 @@ export default function CombatePromptRival() {
                   </div>
                 </button>
 
-                {/* HUIR (ABAJO FULL) */}
                 <button
                   className="pixel-ui2 combate-btn combate-btn--flee"
                   onClick={onHuir}
@@ -859,9 +885,7 @@ export default function CombatePromptRival() {
 
                   <div className="pixel-ui2 combate-btn-row">
                     <button
-                      className={`pixel-ui2 combate-btn combate-btn-wide ${
-                        opcionSeleccionada === null ? "combate-btn--disabled" : ""
-                      }`}
+                      className={`pixel-ui2 combate-btn combate-btn-wide ${opcionSeleccionada === null ? "combate-btn--disabled" : ""}`}
                       onClick={resolverRespuesta}
                       disabled={opcionSeleccionada === null}
                     >

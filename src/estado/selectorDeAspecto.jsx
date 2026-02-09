@@ -39,10 +39,14 @@ const MAPA_ASPECTOS = {
     CALAVERA: {
       1: {
         idle: rivalCalavera1,
+        run: rivalCalavera1,     // ✅ temporal: mismo asset (luego lo cambias)
+        attack: rivalCalavera1,  // ✅ temporal: mismo asset
         derrotado: rivalCalavera1Derrotado ?? null,
       },
       2: {
         idle: rivalCalavera2,
+        run: rivalCalavera2,
+        attack: rivalCalavera2,
         derrotado: rivalCalavera2Derrotado ?? null,
       },
     },
@@ -52,10 +56,22 @@ const MAPA_ASPECTOS = {
   DEFAULT: {
     idle: skinDefaultIdle,
     walk: skinDefaultWalk,
+    run: skinDefaultWalk,      // ✅ temporal
+    attack: skinDefaultIdle,   // ✅ temporal
   },
   ISAIAS: {
     idle: skinIsaiasIdle,
     walk: skinIsaiasWalk,
+    run: skinIsaiasIdle,       // ✅ temporal
+    attack: skinIsaiasIdle,    // ✅ temporal
+  },
+
+  // (Opcional) CROCK - si lo usas como aspecto del jugador
+  CROCK: {
+    idle: skinCrockIdle,
+    walk: skinCrockWalk,
+    run: skinCrockIdle,        // ✅ temporal
+    attack: skinCrockIdle,     // ✅ temporal
   },
 };
 
@@ -65,7 +81,7 @@ const MAPA_ASPECTOS = {
 /**
  * selectorDeAspecto (jugador)
  * @param {string} aspecto - estado.jugador.aspecto (ej: "ISAIAS")
- * @param {string} anim - "idle" | "walk" (default "idle")
+ * @param {string} anim - "idle" | "walk" | "run" | "attack" (default "idle")
  * @returns {string|null}
  */
 export function selectorDeAspecto(aspecto, anim = "idle") {
@@ -73,12 +89,12 @@ export function selectorDeAspecto(aspecto, anim = "idle") {
   const set = MAPA_ASPECTOS[key] || MAPA_ASPECTOS.DEFAULT;
 
   // fallback por si falta la animación en ese set
-  return set?.[anim] || MAPA_ASPECTOS.DEFAULT?.[anim] || null;
+  return set?.[anim] || MAPA_ASPECTOS.DEFAULT?.[anim] || MAPA_ASPECTOS.DEFAULT?.idle || null;
 }
 
 /**
  * selectorPackAspecto (jugador)
- * @returns {{idle?:string, walk?:string}}
+ * @returns {{idle?:string, walk?:string, run?:string, attack?:string}}
  */
 export function selectorPackAspecto(aspecto) {
   const key = (aspecto || "DEFAULT").toString().toUpperCase();
@@ -92,7 +108,7 @@ export function selectorPackAspecto(aspecto) {
  * selectorDeRival
  * @param {string} familia - ej: "CALAVERA"
  * @param {number|string} tier - ej: 1, 2, 3...
- * @param {string} anim - ej: "idle" | "walk" | "attack" | "defend" | "derrotado"
+ * @param {string} anim - ej: "idle" | "run" | "attack" | "derrotado"
  * @returns {string|null}
  */
 export function selectorDeRival(familia, tier = 1, anim = "idle") {
@@ -100,7 +116,7 @@ export function selectorDeRival(familia, tier = 1, anim = "idle") {
   const tierKey = String(Math.max(1, Math.round(Number(tier) || 1)));
 
   const fam = MAPA_ASPECTOS.RIVAL?.[famKey];
-  const set = fam?.[tierKey] || fam?.[1] || null;
+  const set = fam?.[tierKey] || fam?.["1"] || null;
 
   // fallback: si no existe el anim en ese tier, intenta idle
   return set?.[anim] || set?.idle || null;
@@ -114,5 +130,5 @@ export function selectorPackRival(familia, tier = 1) {
   const tierKey = String(Math.max(1, Math.round(Number(tier) || 1)));
 
   const fam = MAPA_ASPECTOS.RIVAL?.[famKey];
-  return fam?.[tierKey] || fam?.[1] || null;
+  return fam?.[tierKey] || fam?.["1"] || null;
 }

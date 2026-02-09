@@ -56,6 +56,9 @@
 
   position: relative;
   overflow: hidden;
+
+  /* ✅ Distancia del “dash” hacia el centro (ajústala si quieres más/menos) */
+  --attack-dx: 650px;
 }
 
 /* HEADER encima del battlefield */
@@ -127,6 +130,11 @@
   width: 100px;   /* ✅ 100x100 */
   height: 100px;  /* ✅ 100x100 */
   pointer-events: none;
+
+  /* ✅ para que el “fondo” de estado (run/attack) se vea bien */
+  border-radius: 10px;
+  padding: 6px;
+  box-sizing: border-box;
 }
 
 .bt-player { left: 10%; }
@@ -322,4 +330,109 @@
 
   .bt-player { left: 6%; }
   .bt-rival  { right: 6%; }
+
+  .combate-battlefield{
+    --attack-dx: 220px;
+  }
+}
+
+/* ===========================
+   ATAQUES (fase FEEDBACK)
+   =========================== */
+
+/* Distancia del “dash” hacia el centro (ajústala si quieres más/menos) */
+.combate-battlefield{
+  --attack-dx: 650px;
+}
+
+/* Que el que ataca quede por encima mientras se mueve */
+.bt-player.bt-attack-player,
+.bt-rival.bt-attack-rival{
+  z-index: 50;
+  will-change: transform;
+}
+
+
+/* ✅ Duración total 1.5s (incluye HOLD y “turn” suave) */
+.bt-player.bt-attack-player{
+  animation: btPlayerAttack 3s cubic-bezier(.2,.9,.2,1) both;
+}
+
+.bt-rival.bt-attack-rival{
+  animation: btRivalAttack 3s cubic-bezier(.2,.9,.2,1) both;
+}
+
+/*
+  TIMING 1.5s:
+  0%  -> 32%   : corre hacia el objetivo
+  32% -> 56%   : hold (attack)
+  56% -> 62%   : turn (flip) estando quieto en destino
+  62% -> 96%   : regresa corriendo (ya invertido)
+  96% -> 100%  : endereza en su posición final
+*/
+
+/* PLAYER: va a la derecha y vuelve */
+@keyframes btPlayerAttack{
+  0%   { transform: translateX(0) scale(1) scaleX(1); }
+  32%  { transform: translateX(var(--attack-dx)) scale(1.06) scaleX(1); }
+
+  /* HOLD en destino (ataque) */
+  56%  { transform: translateX(var(--attack-dx)) scale(1.06) scaleX(1); }
+
+  /* TURN en destino (gira para regresar) */
+  62%  { transform: translateX(var(--attack-dx)) scale(1.06) scaleX(-1); }
+
+  /* RETURN */
+  96%  { transform: translateX(0) scale(1) scaleX(-1); }
+
+  /* endereza ya en casa */
+  100% { transform: translateX(0) scale(1) scaleX(1); }
+}
+
+/* RIVAL: va a la izquierda y vuelve
+   (tu sprite ya viene flippeado con .combat-sprite--flip)
+   aquí flippeamos el CONTENEDOR durante el retorno para “anular” el flip del sprite al volver.
+*/
+@keyframes btRivalAttack{
+  0%   { transform: translateX(0) scale(1) scaleX(1); }
+  32%  { transform: translateX(calc(var(--attack-dx) * -1)) scale(1.06) scaleX(1); }
+
+  /* HOLD en destino (ataque) */
+  56%  { transform: translateX(calc(var(--attack-dx) * -1)) scale(1.06) scaleX(1); }
+
+  /* TURN en destino */
+  62%  { transform: translateX(calc(var(--attack-dx) * -1)) scale(1.06) scaleX(-1); }
+
+  /* RETURN */
+  96%  { transform: translateX(0) scale(1) scaleX(-1); }
+
+  /* endereza ya en casa */
+  100% { transform: translateX(0) scale(1) scaleX(1); }
+}
+
+
+
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 720px){
+  .combate-battlefield{
+    --attack-dx: 220px;
+  }
+}
+
+
+/* ===========================
+   “ANIM” TEMP (RUN / ATTACK)
+   - run  => fondo rojo
+   - attack => fondo verde
+   - idle => sin fondo
+   =========================== */
+
+.bt-skin-run{
+  background: rgba(255, 0, 0, 0.35);
+  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.22) inset;
+}
+
+.bt-skin-attack{
+  background: rgba(0, 255, 0, 0.30);
+  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.20) inset;
 }
