@@ -10,6 +10,15 @@ import { selectorDeAspecto, selectorDeRival } from "../../../estado/selectorDeAs
 // ✅ Fondo del PANEL
 import bgPanel from "../../../assets/fondos/bgPanel.png";
 
+// ✅ ICONOS HUD (evitar conflictos)
+import corazonLlenoHUD from "../../../assets/ui/corazones/Corazon.svg";
+import corazonMitadHUD from "../../../assets/ui/corazones/CorazonMitad.svg";
+import corazonVacioHUD from "../../../assets/ui/corazones/CorazonVacio.svg";
+import escudoImgHUD from "../../../assets/ui/escudos/Escudos.svg";
+
+// ✅ Marco retrato
+import marcoHUD from "../../../assets/ui/marcos/marcoDePiedra.svg";
+
 const ENEMIGOS_POR_TIER = {
   1: { vidas: 4, probEscudosAdicionales: 0.08, escudosAdicionales: 1, escudosPorDefecto: 0 },
   2: { vidas: 6, probEscudosAdicionales: 0.08, escudosAdicionales: 1, escudosPorDefecto: 0 },
@@ -35,6 +44,9 @@ function clampAuraLevel(n) {
   if (!Number.isFinite(v)) return 0;
   return Math.max(0, Math.round(v));
 }
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
 function pickRandom(arr) {
   if (!arr?.length) return null;
   return arr[Math.floor(Math.random() * arr.length)];
@@ -51,40 +63,41 @@ function getAuraReglas(auraNivel) {
   return { atkMult: 1 + 2 * lvl, defFailMult: 1 + lvl, tierBonus: lvl };
 }
 
+function buildCorazones(vidaActual, vidaMax, heartsCount) {
+  const max = Math.max(1, Number(vidaMax ?? 1));
+  const vidaNorm = clamp(Number(vidaActual ?? 0), 0, max);
+  const count = Math.max(1, Number(heartsCount ?? 3));
+
+  return Array.from({ length: count }, (_, i) => {
+    const restante = vidaNorm - i * 2;
+    if (restante >= 2) return { tipo: "lleno", src: corazonLlenoHUD };
+    if (restante === 1) return { tipo: "mitad", src: corazonMitadHUD };
+    return { tipo: "vacio", src: corazonVacioHUD };
+  });
+}
+
 export default function CombatePromptRival() {
   const estado = useEstadoJuego();
-  const {
-    cerrarPlantilla,
-    derrotarEnemigo,
-    jugadorRecibirDanio,
+  const acciones = useAccionesJuego();
 
-    // puntaje
-    puntajeResetCombate,
-    puntajeAplicarTurno,
-    puntajeDescartarCombate,
-    puntajeCerrarCombateYSumarTotal,
-
-    // preguntas globales
-    preguntaMarcarAcertada,
-  } = useAccionesJuego();
-
+  // ⚠️ NO retornes antes de hooks
   const plantilla = estado.ui?.plantillaActiva;
-  if (!plantilla || plantilla.id !== "COMBATE_RIVAL") return null;
+  const combateActivo = !!plantilla && plantilla.id === "COMBATE_RIVAL";
 
-  const origenZonaId = plantilla.origenZonaId;
-  const props = plantilla.props || {};
+  // Props del combate (si no hay combate, valores seguros)
+  const origenZonaId = combateActivo ? plantilla.origenZonaId : null;
+  const props = combateActivo ? plantilla.props || {} : {};
 
   const rivalNombre = String(props.rivalNombre ?? "").trim() || "RIVAL";
   const rivalTierProp = props.rivalTier ?? props.tier ?? 1;
-  const rivalVidasProp = props.rivalVidas;
+
+  // ✅ OJO: ignoramos rivalVidasProp (ya NO se usa)
   const rivalEscudosProp = props.rivalEscudos;
 
-  // ✅ familia para selectorDeRival
   const rivalFamilia = String(props.rivalFamilia ?? props.familia ?? "CALAVERA").trim() || "CALAVERA";
 
   const titulo = props.titulo ?? "COMBATE";
   const texto = props.texto ?? "Combate por turnos.";
-
   const baseTier = clampTier(rivalTierProp);
 
   const danioPerderBase = Number.isFinite(props.danioPerder) ? props.danioPerder : 1;
@@ -96,14 +109,15 @@ export default function CombatePromptRival() {
     ? estado.preguntas.acertadasIds
     : [];
 
-  const puntajeCombateActual = Math.floor(Number(estado.puntaje?.combateActual ?? 0));
-  const puntajeTotal = Math.floor(Number(estado.puntaje?.total ?? 0));
-
+  // Jugador
   const vidasJugador = Number.isFinite(estado.jugador?.vida) ? estado.jugador.vida : 0;
   const escudosJugador = Number.isFinite(estado.jugador?.escudos) ? estado.jugador.escudos : 0;
+  const nombreJugador = String(estado.jugador?.nombre ?? "").trim() || "JUGADOR";
+  const jugadorAspecto = estado.jugador?.aspecto || "DEFAULT";
 
-  const initRef = useRef(false);
+  // States
   const [vidasRival, setVidasRival] = useState(1);
+  const [vidasRivalMax, setVidasRivalMax] = useState(1);
   const [escudosRival, setEscudosRival] = useState(0);
 
   const [turno, setTurno] = useState("JUGADOR");
@@ -125,33 +139,31 @@ export default function CombatePromptRival() {
 
   const [modoPregunta, setModoPregunta] = useState("ATAQUE");
 
-  const estiloBotonBase = useMemo(
-    () => ({
-      width: 270,
-      height: 216,
-      position: "relative",
-      display: "block",
-      padding: 0,
-      transition: "transform 0.15s ease-out",
-      transform: "scale(1)",
-      transformOrigin: "center",
-    }),
-    []
-  );
+  // ✅ combateKey YA NO depende de rivalVidasProp
+  const combateKey = useMemo(() => {
+    return [
+      String(origenZonaId ?? ""),
+      rivalNombre,
+      String(baseTier),
+      String(rivalEscudosProp ?? ""),
+      rivalFamilia,
+    ].join("|");
+  }, [origenZonaId, rivalNombre, baseTier, rivalEscudosProp, rivalFamilia]);
 
   const onHoverScale = useCallback((ev, scale) => {
     if (!ev?.currentTarget) return;
     ev.currentTarget.style.transform = `scale(${scale})`;
   }, []);
 
+  // ✅ Inicialización SOLO cuando el combate está activo
   useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
+    if (!combateActivo) return;
 
-    puntajeResetCombate?.();
+    acciones?.puntajeResetCombate?.();
 
     const cfg = ENEMIGOS_POR_TIER[baseTier] ?? ENEMIGOS_POR_TIER[1];
 
+    // ✅ escudos: si props trae número, se respeta; si no, regla por tier
     let esc = 0;
     if (Number.isFinite(Number(rivalEscudosProp))) {
       esc = Math.max(0, Math.floor(Number(rivalEscudosProp)));
@@ -163,14 +175,11 @@ export default function CombatePromptRival() {
       esc = Math.max(0, Math.floor(esc));
     }
 
-    let v = 1;
-    if (Number.isFinite(Number(rivalVidasProp))) {
-      v = Math.max(1, Math.floor(Number(rivalVidasProp)));
-    } else {
-      v = Math.max(1, Math.floor(Number(cfg.vidas || 1)));
-    }
+    // ✅ VIDAS: SIEMPRE por tier (ignorar props.rivalVidas)
+    const v = Math.max(1, Math.floor(Number(cfg.vidas || 1)));
 
     setVidasRival(v);
+    setVidasRivalMax(v);
     setEscudosRival(esc);
 
     setTurno("JUGADOR");
@@ -189,9 +198,10 @@ export default function CombatePromptRival() {
 
     setFinResultado(null);
     finProcesadoRef.current = false;
-  }, [baseTier, rivalVidasProp, rivalEscudosProp, puntajeResetCombate]);
+  }, [combateActivo, combateKey, baseTier, rivalEscudosProp, acciones]);
 
   useEffect(() => {
+    if (!combateActivo) return;
     if (fase === "FIN") return;
 
     if (vidasJugador <= 0) {
@@ -208,10 +218,12 @@ export default function CombatePromptRival() {
       setFinMensaje(`¡Ganaste! ${rivalNombre} se quedó sin vidas.`);
       return;
     }
-  }, [vidasJugador, vidasRival, fase, rivalNombre]);
+  }, [combateActivo, vidasJugador, vidasRival, fase, rivalNombre]);
 
   const cargarPregunta = useCallback(
     (tierParaPregunta, modo) => {
+      if (!combateActivo) return;
+
       const bancoRaw = getBancoPorTier(tierParaPregunta);
       const banco = bancoRaw.filter((q) => !preguntasAcertadasGlobal.includes(String(q.id)));
 
@@ -234,7 +246,7 @@ export default function CombatePromptRival() {
       setPreguntasVistas((prev) => (prev.includes(seleccion.id) ? prev : [...prev, seleccion.id]));
       setFase("PREGUNTA");
     },
-    [preguntasVistas, preguntasAcertadasGlobal]
+    [combateActivo, preguntasVistas, preguntasAcertadasGlobal]
   );
 
   const escudosRivalRef = useRef(0);
@@ -286,6 +298,7 @@ export default function CombatePromptRival() {
   }, []);
 
   const resolverRespuesta = useCallback(() => {
+    if (!combateActivo) return;
     if (!preguntaActual) return;
     if (opcionSeleccionada === null) return;
 
@@ -293,13 +306,15 @@ export default function CombatePromptRival() {
 
     setFeedbackTitulo(correcta ? "CORRECTO" : "INCORRECTO");
     setFeedbackTexto(
-      correcta ? preguntaActual.feedbackOk ?? "Respuesta correcta." : preguntaActual.feedbackFail ?? "Respuesta incorrecta."
+      correcta
+        ? preguntaActual.feedbackOk ?? "Respuesta correcta."
+        : preguntaActual.feedbackFail ?? "Respuesta incorrecta."
     );
 
     const puntosTurno = Math.max(1, Math.floor(Number(reglasAuraActual.atkMult || 1)));
-    puntajeAplicarTurno?.({ puntos: puntosTurno, correcto: !!correcta });
+    acciones?.puntajeAplicarTurno?.({ puntos: puntosTurno, correcto: !!correcta });
 
-    if (correcta) preguntaMarcarAcertada?.(preguntaActual.id);
+    if (correcta) acciones?.preguntaMarcarAcertada?.(preguntaActual.id);
     else setAuraNivel(0);
 
     if (modoPregunta === "ATAQUE") {
@@ -312,24 +327,24 @@ export default function CombatePromptRival() {
     if (modoPregunta === "DEFENSA") {
       if (!correcta) {
         const mult = Math.max(1, Number(reglasAuraActual.defFailMult || 1));
-        jugadorRecibirDanio(danioPerderBase * mult);
+        acciones?.jugadorRecibirDanio?.(danioPerderBase * mult);
       }
     }
 
     setFase("FEEDBACK");
   }, [
+    combateActivo,
     preguntaActual,
     opcionSeleccionada,
     modoPregunta,
     reglasAuraActual,
     aplicarGolpeRival,
-    jugadorRecibirDanio,
     danioPerderBase,
-    puntajeAplicarTurno,
-    preguntaMarcarAcertada,
+    acciones,
   ]);
 
   useEffect(() => {
+    if (!combateActivo) return;
     if (fase !== "PREGUNTA") return;
 
     const handler = (ev) => {
@@ -364,9 +379,10 @@ export default function CombatePromptRival() {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [fase, preguntaActual, opcionSeleccionada, resolverRespuesta]);
+  }, [combateActivo, fase, preguntaActual, opcionSeleccionada, resolverRespuesta]);
 
   useEffect(() => {
+    if (!combateActivo) return;
     if (fase !== "FEEDBACK") return;
 
     const t = window.setTimeout(() => {
@@ -389,22 +405,33 @@ export default function CombatePromptRival() {
     }, Math.max(0, Number(feedbackDelayMs || 0)));
 
     return () => window.clearTimeout(t);
-  }, [fase, feedbackDelayMs, modoPregunta, vidasJugador, vidasRival, cargarPregunta, tierRonda, baseTier]);
+  }, [
+    combateActivo,
+    fase,
+    feedbackDelayMs,
+    modoPregunta,
+    vidasJugador,
+    vidasRival,
+    cargarPregunta,
+    tierRonda,
+    baseTier,
+  ]);
 
   useEffect(() => {
+    if (!combateActivo) return;
     if (fase !== "FIN") return;
     if (finProcesadoRef.current) return;
     finProcesadoRef.current = true;
 
     if (finResultado === "WIN") {
-      puntajeCerrarCombateYSumarTotal?.();
-      if (origenZonaId) derrotarEnemigo(origenZonaId);
+      acciones?.puntajeCerrarCombateYSumarTotal?.();
+      if (origenZonaId) acciones?.derrotarEnemigo?.(origenZonaId);
       return;
     }
-    puntajeDescartarCombate?.();
-  }, [fase, finResultado, puntajeCerrarCombateYSumarTotal, puntajeDescartarCombate, origenZonaId, derrotarEnemigo]);
+    acciones?.puntajeDescartarCombate?.();
+  }, [combateActivo, fase, finResultado, origenZonaId, acciones]);
 
-  const salir = useCallback(() => cerrarPlantilla(), [cerrarPlantilla]);
+  const salir = useCallback(() => acciones?.cerrarPlantilla?.(), [acciones]);
 
   const textoTurno = useMemo(() => {
     if (fase === "FIN") return "COMBATE FINALIZADO";
@@ -421,17 +448,162 @@ export default function CombatePromptRival() {
       if (debugActivo) {
         return `pixel-ui2 combate-option ${isCorrect ? "combate-option--debug-ok" : "combate-option--debug-fail"}`;
       }
-
       return `pixel-ui2 combate-option ${selected ? "combate-option--selected" : ""}`.trim();
     },
     [preguntaActual, opcionSeleccionada, debugActivo]
   );
 
-  // Sprites (100x100, si quieres ahora)
-  const jugadorAspecto = estado.jugador?.aspecto || "DEFAULT";
+  // Sprites
   const srcJugador = useMemo(() => selectorDeAspecto(jugadorAspecto, "idle"), [jugadorAspecto]);
   const animRival = useMemo(() => (fase === "FIN" && finResultado === "WIN" ? "derrotado" : "idle"), [fase, finResultado]);
   const srcRival = useMemo(() => selectorDeRival(rivalFamilia, baseTier, animRival), [rivalFamilia, baseTier, animRival]);
+
+  // HUD iconos
+  const corazonesJugador = useMemo(() => buildCorazones(vidasJugador, 6, 3), [vidasJugador]);
+  const escudosJugadorArr = useMemo(
+    () => Array.from({ length: clamp(escudosJugador, 0, 10) }, (_, i) => i),
+    [escudosJugador]
+  );
+
+  const corazonesRival = useMemo(() => {
+    const max = Math.max(1, Number(vidasRivalMax ?? 1));
+    const count = Math.max(1, Math.ceil(max / 2));
+    return buildCorazones(vidasRival, max, count);
+  }, [vidasRival, vidasRivalMax]);
+
+  const escudosRivalArr = useMemo(
+    () => Array.from({ length: clamp(escudosRival, 0, 10) }, (_, i) => i),
+    [escudosRival]
+  );
+
+  // estilos HUD
+  const textStroke = {
+    color: "#fff",
+    textShadow:
+      "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 1px 0 0 #000, -1px 0 0 #000",
+  };
+
+  const HUD_ICON = 18;
+  const hudFilaStyle = { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 };
+  const iconStyle = {
+    width: HUD_ICON,
+    height: HUD_ICON,
+    imageRendering: "pixelated",
+    userSelect: "none",
+    pointerEvents: "none",
+  };
+  const separadorStyle = { width: 1, height: HUD_ICON, background: "rgba(255,255,255,0.25)", marginInline: 4 };
+
+  const portraitBoxStyle = (align = "left") => ({
+    width: 56,
+    height: 56,
+    flex: "0 0 auto",
+    backgroundImage: `url(${marcoHUD})`,
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "contain",
+    backgroundPosition: "center",
+    display: "grid",
+    placeItems: "center",
+    marginRight: align === "left" ? 10 : 0,
+    marginLeft: align === "right" ? 10 : 0,
+  });
+
+  const portraitViewportStyle = {
+    width: 40,
+    height: 40,
+    overflow: "hidden",
+    borderRadius: 6,
+    display: "grid",
+    placeItems: "center",
+    background: "transparent",
+  };
+
+  const portraitImgStyle = (zoom, zx, zy) => ({
+    width: 64,
+    height: 64,
+    imageRendering: "pixelated",
+    transform: `translate(${zx}px, ${zy}px) scale(${zoom})`,
+    transformOrigin: "center",
+    userSelect: "none",
+    pointerEvents: "none",
+  });
+
+  const zoomJugador = 1.35,
+    zoomXJugador = 0,
+    zoomYJugador = -4;
+  const zoomRival = 1.35,
+    zoomXRival = 0,
+    zoomYRival = -4;
+
+  // ✅ Layout nuevo de botones (inline para no tocar CSS)
+  const actionsGridStyle = useMemo(
+    () => ({
+      width: "100%",
+      maxWidth: 1166, // tu contenedor objetivo
+      marginInline: "auto",
+      display: "grid",
+      gridTemplateColumns: "repeat(3, 1fr)",
+      gridTemplateRows: "auto auto",
+      gap: 18,
+      alignItems: "stretch",
+    }),
+    []
+  );
+
+  // Botón base adaptativo (se estira por grid)
+  const btnCardBase = useMemo(
+    () => ({
+      width: "100%",
+      minHeight: 170, // se ajusta al espacio (antes 216 fijo)
+      position: "relative",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "flex-end",
+      padding: 0,
+      transition: "transform 0.15s ease-out",
+      transform: "scale(1)",
+      transformOrigin: "center",
+    }),
+    []
+  );
+
+  const btnFleeStyle = useMemo(
+    () => ({
+      gridColumn: "1 / -1",
+      width: "100%",
+      height: 100,
+      minHeight: 100,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+    }),
+    []
+  );
+
+  const titleStyle = useMemo(
+    () => ({
+      fontSize: 22, // ✅ más grande
+      fontWeight: 900,
+      marginBottom: 24,
+      textAlign: "center",
+      ...textStroke,
+    }),
+    [textStroke]
+  );
+
+  const subStyle = useMemo(
+    () => ({
+      fontSize: 16, // ✅ más grande
+      opacity: 0.95,
+      marginBottom: 10,
+      textAlign: "center",
+      ...textStroke,
+    }),
+    [textStroke]
+  );
+
+  // ✅ render condicional AL FINAL
+  if (!combateActivo) return null;
 
   return (
     <div className="pixel-ui2 combate-overlay">
@@ -444,37 +616,109 @@ export default function CombatePromptRival() {
           backgroundRepeat: "no-repeat",
         }}
       >
-        {/* BATTLEFIELD */}
         <div className="pixel-ui2 combate-battlefield">
-          <div className="pixel-ui2 combate-header">
-            <div className="pixel-ui2 combate-col">
-              <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
-                JUGADOR
-              </div>
-              <div className="pixel-ui2" style={{ fontSize: 14, fontWeight: 800 }}>
-                Vidas: {vidasJugador} | Escudos: {escudosJugador}
+          <div
+            className="pixel-ui2 combate-header"
+            style={{ background: "transparent", border: "none", boxShadow: "none" }}
+          >
+            {/* JUGADOR */}
+            <div
+              className="pixel-ui2 combate-col"
+              style={{ display: "flex", alignItems: "flex-start", background: "transparent" }}
+            >
+              <div style={portraitBoxStyle("left")}>
+                <div style={portraitViewportStyle}>
+                  {srcJugador ? (
+                    <img
+                      src={srcJugador}
+                      alt=""
+                      draggable={false}
+                      style={portraitImgStyle(zoomJugador, zoomXJugador, zoomYJugador)}
+                    />
+                  ) : (
+                    <div style={{ width: 36, height: 36, opacity: 0.3, border: "1px solid rgba(255,255,255,0.35)" }} />
+                  )}
+                </div>
               </div>
 
-              <div className="pixel-ui2 combate-points">Puntos (combate): {puntajeCombateActual}</div>
-              <div className="pixel-ui2 combate-points-total">Total: {puntajeTotal}</div>
+              <div style={{ minWidth: 0 }}>
+                <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.95, ...textStroke }}>
+                  {nombreJugador}
+                </div>
+
+                <div style={hudFilaStyle} aria-label="hud-jugador">
+                  {corazonesJugador.map((c, idx) => (
+                    <img
+                      key={`p-hp-${idx}-${c.tipo}`}
+                      src={c.src}
+                      alt={`vida-${c.tipo}`}
+                      draggable={false}
+                      style={iconStyle}
+                    />
+                  ))}
+                  {escudosJugadorArr.length > 0 && <div style={separadorStyle} />}
+                  {escudosJugadorArr.map((i) => (
+                    <img key={`p-sh-${i}`} src={escudoImgHUD} alt="escudo" draggable={false} style={iconStyle} />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="pixel-ui2 combate-center">
-              <div className="pixel-ui2 combate-title">{titulo}</div>
-              <div className="pixel-ui2 combate-subtitle">
-                {textoTurno} • Rival: {rivalNombre} • Tier rival: {baseTier} • Aura: {auraNivel}{" "}
-                {auraNivel > 0 ? `(Atk x${reglasAuraActual.atkMult} / FailDef x${reglasAuraActual.defFailMult})` : ""}
+            {/* CENTRO */}
+            <div className="pixel-ui2 combate-center" style={{ background: "transparent" }}>
+              <div className="pixel-ui2 combate-title" style={textStroke}>
+                {titulo}
+              </div>
+              <div className="pixel-ui2 combate-subtitle" style={{ ...textStroke, opacity: 0.95 }}>
+                {textoTurno} • {rivalNombre} • Tier {baseTier} • Aura {auraNivel}
+                {auraNivel > 0 ? ` (Atk x${reglasAuraActual.atkMult} / FailDef x${reglasAuraActual.defFailMult})` : ""}
                 {debugActivo ? " • DEBUG ON" : ""}
               </div>
-              <div className="pixel-ui2 combate-description">{texto}</div>
+              <div className="pixel-ui2 combate-description" style={{ ...textStroke, opacity: 0.9 }}>
+                {texto}
+              </div>
             </div>
 
-            <div className="pixel-ui2 combate-col combate-col--right">
-              <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.85 }}>
-                {rivalNombre.toUpperCase()}
+            {/* RIVAL */}
+            <div
+              className="pixel-ui2 combate-col combate-col--right"
+              style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", background: "transparent" }}
+            >
+              <div style={{ minWidth: 0, textAlign: "right" }}>
+                <div className="pixel-ui2" style={{ fontSize: 12, opacity: 0.95, ...textStroke }}>
+                  {rivalNombre.toUpperCase()}
+                </div>
+
+                <div style={{ ...hudFilaStyle, justifyContent: "flex-end" }} aria-label="hud-rival">
+                  {corazonesRival.map((c, idx) => (
+                    <img
+                      key={`r-hp-${idx}-${c.tipo}`}
+                      src={c.src}
+                      alt={`vida-${c.tipo}`}
+                      draggable={false}
+                      style={iconStyle}
+                    />
+                  ))}
+                  {escudosRivalArr.length > 0 && <div style={separadorStyle} />}
+                  {escudosRivalArr.map((i) => (
+                    <img key={`r-sh-${i}`} src={escudoImgHUD} alt="escudo" draggable={false} style={iconStyle} />
+                  ))}
+                </div>
               </div>
-              <div className="pixel-ui2" style={{ fontSize: 14, fontWeight: 800 }}>
-                Vidas: {vidasRival} | Escudos: {escudosRival}
+
+              <div style={portraitBoxStyle("right")}>
+                <div style={portraitViewportStyle}>
+                  {srcRival ? (
+                    <img
+                      src={srcRival}
+                      alt=""
+                      draggable={false}
+                      style={portraitImgStyle(zoomRival, zoomXRival, zoomYRival)}
+                    />
+                  ) : (
+                    <div style={{ width: 36, height: 36, opacity: 0.3, border: "1px solid rgba(255,255,255,0.35)" }} />
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -501,14 +745,8 @@ export default function CombatePromptRival() {
           {/* FIN */}
           {fase === "FIN" && (
             <>
-              <div className="pixel-ui2" style={{ fontSize: 16, fontWeight: 900 }}>
+              <div className="pixel-ui2" style={{ fontSize: 16, fontWeight: 900, ...textStroke }}>
                 {finMensaje || "Combate finalizado."}
-              </div>
-
-              <div className="pixel-ui2" style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>
-                {finResultado === "WIN"
-                  ? "✅ Los puntos del combate se acumularon al total."
-                  : "❌ Los puntos del combate fueron descartados."}
               </div>
 
               <div className="pixel-ui2 combate-btn-row">
@@ -522,54 +760,73 @@ export default function CombatePromptRival() {
           {/* MENU */}
           {fase === "MENU" && turno === "JUGADOR" && (
             <>
-              <div className="pixel-ui2 combate-top-title">
+              <div className="pixel-ui2 combate-top-title" style={textStroke}>
                 <h2>Elige una acción:</h2>
               </div>
 
-              <div className="pixel-ui2 combate-menu-row">
+              {/* ✅ NUEVO LAYOUT: 3 arriba + huir abajo full */}
+              <div style={actionsGridStyle}>
+                {/* INICIAR ATAQUE */}
                 <button
                   className="pixel-ui2 combate-btn"
                   onClick={onAtacar}
-                  style={estiloBotonBase}
+                  style={btnCardBase}
                   onMouseEnter={(e) => onHoverScale(e, 1.02)}
                   onMouseLeave={(e) => onHoverScale(e, 1)}
                 >
-                  <div className="pixel-ui2 combate-btn-sub">
+                  <div className="pixel-ui2 combate-btn-sub" style={subStyle}>
                     Tier ronda: {tierRondaSiAtaco}
                     {auraNivel > 0 ? ` • Golpe x${reglasAuraActual.atkMult}` : ""}
                   </div>
-                  <div className="pixel-ui2 combate-btn-title">Iniciar Ataque</div>
+                  <div className="pixel-ui2 combate-btn-title" style={titleStyle}>
+                    Iniciar Ataque
+                  </div>
                 </button>
 
+                {/* AURA */}
                 <button
                   className="pixel-ui2 combate-btn combate-btn--aura"
                   onClick={onAumentarAura}
-                  style={estiloBotonBase}
+                  style={btnCardBase}
                   onMouseEnter={(e) => onHoverScale(e, 1.02)}
                   onMouseLeave={(e) => onHoverScale(e, 1)}
                 >
-                  <div className="pixel-ui2 combate-btn-sub">Aura: {auraNivel} ▶ {auraNivel + 1}</div>
-                  <div className="pixel-ui2 combate-btn-title">Aura</div>
+                  <div className="pixel-ui2 combate-btn-sub" style={subStyle}>
+                    Aura: {auraNivel} ▶ {auraNivel + 1}
+                  </div>
+                  <div className="pixel-ui2 combate-btn-title" style={titleStyle}>
+                    Aura
+                  </div>
                 </button>
 
+                {/* INVENTARIO */}
                 <button
                   className="pixel-ui2 combate-btn combate-btn--disabled"
                   disabled
-                  style={{ ...estiloBotonBase, cursor: "not-allowed" }}
+                  style={{ ...btnCardBase, cursor: "not-allowed" }}
                 >
-                  <div className="pixel-ui2 combate-btn-sub">(Próximamente)</div>
-                  <div className="pixel-ui2 combate-btn-title">Inventario</div>
+                  <div className="pixel-ui2 combate-btn-sub" style={subStyle}>
+                    (Próximamente)
+                  </div>
+                  <div className="pixel-ui2 combate-btn-title" style={titleStyle}>
+                    Inventario
+                  </div>
                 </button>
 
+                {/* HUIR (ABAJO FULL) */}
                 <button
                   className="pixel-ui2 combate-btn combate-btn--flee"
                   onClick={onHuir}
-                  style={estiloBotonBase}
+                  style={{ ...btnCardBase, ...btnFleeStyle }}
                   onMouseEnter={(e) => onHoverScale(e, 1.02)}
                   onMouseLeave={(e) => onHoverScale(e, 1)}
                 >
-                  <div className="pixel-ui2 combate-btn-sub">Abandonas el combate</div>
-                  <div className="pixel-ui2 combate-btn-title">Huir</div>
+                  <div className="pixel-ui2 combate-btn-sub" style={{ ...subStyle, marginBottom: 6 }}>
+                    Abandonas el combate
+                  </div>
+                  <div className="pixel-ui2 combate-btn-title" style={{ ...titleStyle, marginBottom: 0 }}>
+                    Huir
+                  </div>
                 </button>
               </div>
             </>
@@ -580,7 +837,7 @@ export default function CombatePromptRival() {
             <>
               {preguntaActual ? (
                 <>
-                  <div className="pixel-ui2 combate-question">
+                  <div className="pixel-ui2 combate-question" style={textStroke}>
                     <h2>{preguntaActual.pregunta}</h2>
                   </div>
 
@@ -613,9 +870,17 @@ export default function CombatePromptRival() {
                   </div>
                 </>
               ) : (
-                <div className="pixel-ui2" style={{ opacity: 0.85 }}>
-                  No hay preguntas disponibles (todas las de este tier ya fueron acertadas globalmente).
-                </div>
+                <>
+                  <div className="pixel-ui2" style={{ opacity: 0.95, marginBottom: 10, ...textStroke }}>
+                    No hay preguntas disponibles (todas las de este tier ya fueron acertadas globalmente).
+                  </div>
+
+                  <div className="pixel-ui2 combate-btn-row">
+                    <button className="pixel-ui2 combate-btn combate-btn-wide" onClick={() => setFase("MENU")}>
+                      Volver al menú
+                    </button>
+                  </div>
+                </>
               )}
             </>
           )}
@@ -623,13 +888,13 @@ export default function CombatePromptRival() {
           {/* FEEDBACK */}
           {fase === "FEEDBACK" && (
             <>
-              <div className="pixel-ui2" style={{ fontSize: 18, fontWeight: 1000, marginBottom: 8 }}>
+              <div className="pixel-ui2" style={{ fontSize: 18, fontWeight: 1000, marginBottom: 8, ...textStroke }}>
                 {feedbackTitulo}
               </div>
-              <div className="pixel-ui2" style={{ fontSize: 14, opacity: 0.92, lineHeight: 1.35 }}>
+              <div className="pixel-ui2" style={{ fontSize: 14, opacity: 0.95, lineHeight: 1.35, ...textStroke }}>
                 {feedbackTexto}
               </div>
-              <div className="pixel-ui2" style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
+              <div className="pixel-ui2" style={{ marginTop: 10, fontSize: 12, opacity: 0.9, ...textStroke }}>
                 Siguiente turno en {Math.round(Math.max(0, feedbackDelayMs) / 100) / 10}s…
               </div>
             </>

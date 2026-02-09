@@ -30,8 +30,8 @@ const ESTADO_INICIAL_BASE = {
     ruta: [],
     colider: { ancho: 64, alto: 32, offsetX: 0, offsetY: 0 },
 
-    vida: 2,
-    escudos: 1,
+    vida: 6,
+    escudos: 0,
 
     inventario: {
       superPosion: 3,

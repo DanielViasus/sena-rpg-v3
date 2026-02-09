@@ -6,12 +6,10 @@ import "./HUDJugador.css";
 import skin from "../../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
 import marco from "../../assets/ui/marcos/marcoDePiedra.svg";
 
-// 👇 ideal: 3 estados (lleno/mitad/vacio)
 import corazonLleno from "../../assets/ui/corazones/Corazon.svg";
 import corazonMitad from "../../assets/ui/corazones/CorazonMitad.svg";
 import corazonVacio from "../../assets/ui/corazones/CorazonVacio.svg";
 
-// 👇 escudo (mismo tamaño que corazón)
 import escudoImg from "../../assets/ui/escudos/Escudos.svg";
 
 function clamp(n, min, max) {
@@ -21,37 +19,29 @@ function clamp(n, min, max) {
 export default function HUDJugador() {
   const estado = useEstadoJuego();
 
-  // ✅ Si el inventario está abierto, no renderiza HUD
   const plantilla = estado.ui?.plantillaActiva;
-  const inventarioAbierto = !!plantilla && plantilla.id === "INVENTARIO";
-  if (inventarioAbierto) return null;
 
-  // Ajuste del "encuadre" del sprite dentro del marco (NO es escalado del HUD)
-  const zoom = 1.45; // prueba 1.25–1.55
-  const zoomX = 0; // px
-  const zoomY = -8; // px (negativo = sube hacia la cara)
+  // ✅ ocultar HUD si inventario o combate están activos
+  const ocultarHUD = !!plantilla && (plantilla.id === "INVENTARIO" || plantilla.id === "COMBATE_RIVAL");
+  if (ocultarHUD) return null;
+
+  const zoom = 1.45;
+  const zoomX = 0;
+  const zoomY = -8;
 
   const datos = useMemo(() => {
     const vida = estado.jugador?.vida ?? 6;
     const vidaMax = estado.jugador?.vidaMax ?? 6;
     const escudos = estado.jugador?.escudos ?? 0;
-
-    const nombre = estado.jugador?.nombre ?? "Daniel Alejandro Viasus S.";
-
+    const nombre = estado.jugador?.nombre ?? "JUGADOR";
     return { vida, vidaMax, escudos, nombre };
-  }, [
-    estado.jugador?.vida,
-    estado.jugador?.vidaMax,
-    estado.jugador?.escudos,
-    estado.jugador?.nombre,
-  ]);
+  }, [estado.jugador?.vida, estado.jugador?.vidaMax, estado.jugador?.escudos, estado.jugador?.nombre]);
 
-  // ✅ siempre 3 corazones = 6 vidas (2 vidas por corazón)
   const vidaNormalizada = clamp(datos.vida, 0, 6);
 
   const corazones = useMemo(() => {
     return Array.from({ length: 3 }, (_, i) => {
-      const restante = vidaNormalizada - i * 2; // 2 vidas por corazón
+      const restante = vidaNormalizada - i * 2;
       if (restante >= 2) return { tipo: "lleno", src: corazonLleno };
       if (restante === 1) return { tipo: "mitad", src: corazonMitad };
       return { tipo: "vacio", src: corazonVacio };
@@ -63,7 +53,6 @@ export default function HUDJugador() {
     return Array.from({ length: n }, (_, i) => i);
   }, [datos.escudos]);
 
-  // ✅ Tamaño global de iconos (subido un poco)
   const ICON_SIZE = 22;
 
   return (
@@ -94,29 +83,17 @@ export default function HUDJugador() {
         </div>
 
         <div className="infoCol">
-          <p className="pixel-ui nombre">{estado.jugador.nombre}</p>
+          <p className="pixel-ui nombre">{datos.nombre}</p>
 
           <div className="filaIconos">
             {corazones.map((c, idx) => (
-              <img
-                key={`hp-${idx}-${c.tipo}`}
-                className="iconoVida"
-                src={c.src}
-                alt={`corazon-${c.tipo}`}
-                draggable={false}
-              />
+              <img key={`hp-${idx}-${c.tipo}`} className="iconoVida" src={c.src} alt={`corazon-${c.tipo}`} draggable={false} />
             ))}
 
             {!!escudos.length && <div className="separador" />}
 
             {escudos.map((i) => (
-              <img
-                key={`sh-${i}`}
-                className="iconoVida"
-                src={escudoImg}
-                alt="escudo"
-                draggable={false}
-              />
+              <img key={`sh-${i}`} className="iconoVida" src={escudoImg} alt="escudo" draggable={false} />
             ))}
           </div>
         </div>

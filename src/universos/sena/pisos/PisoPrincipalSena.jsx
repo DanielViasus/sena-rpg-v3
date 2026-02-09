@@ -3,12 +3,13 @@ import { useEffect, useMemo } from "react";
 import Mundo from "../../../juego/mundo/Mundo.jsx";
 import fondo from "../../../assets/svg/fondos/bgSalonDeClases1491x1609.svg";
 
+// ✅ FALTABA
+import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
 
+// ✅ LOS USAS MÁS ABAJO, DEBEN ESTAR
 import Rival from "../../../juego/personajes/rival/Rival.jsx";
 
 
-
-import Jugador from "../../../juego/entidades/jugador/Jugador.jsx";
 import SistemaMoverJugador from "../../../juego/sistema/SistemaMoverJugador.jsx";
 
 import Objeto from "../../../juego/objetos/Objeto.jsx";
@@ -41,10 +42,7 @@ import Teleport from "../../../juego/interacciones/Teleport.jsx";
 
 import PersonajeTutorial from "../../../juego/personajes/tutorial/PersonajeTutorial.jsx";
 
-import {
-  useRegistroColisiones,
-  useVersionRegistroColisiones,
-} from "../../../juego/colisiones/RegistroColisiones.jsx";
+import { useRegistroColisiones, useVersionRegistroColisiones } from "../../../juego/colisiones/RegistroColisiones.jsx";
 
 import { useEstadoJuego, useAccionesJuego } from "../../../estado/EstadoJuego.jsx";
 import {
@@ -64,12 +62,8 @@ export default function PisoPrincipalSena() {
 
   const { jugador, navegacion, debug } = useEstadoJuego();
 
-  const {
-    establecerPosicionJugador,
-    guardarInicioJugador,
-    establecerRutaJugador,
-    limpiarRutaJugador,
-  } = useAccionesJuego();
+  const { establecerPosicionJugador, guardarInicioJugador, establecerRutaJugador, limpiarRutaJugador } =
+    useAccionesJuego();
 
   const registro = useRegistroColisiones();
   const versionColisiones = useVersionRegistroColisiones();
@@ -111,7 +105,7 @@ export default function PisoPrincipalSena() {
     const yCentro = 520;
     establecerPosicionJugador(xCentro, yCentro);
     guardarInicioJugador(xCentro, yCentro);
-  }, [ANCHO_MUNDO, LARGO_MUNDO, establecerPosicionJugador, guardarInicioJugador]);
+  }, [establecerPosicionJugador, guardarInicioJugador]);
 
   function alClickMundo({ x, y }) {
     marcar({ x, y });
@@ -155,158 +149,159 @@ export default function PisoPrincipalSena() {
     [jugador.x, jugador.y]
   );
 
-  // ✅ FIX: NO pasar objetos inline (plantillaProps). Memoízalos.
-  const plantillaTutorialMovimiento = useMemo(
+  const plantillaPropsIsaias = useMemo(
     () => ({
-      titulo: "Tutorial de movimiento",
-      texto: "Haz click en el piso para moverte. Presiona E aquí para ver este tutorial cuando quieras.",
+      dialogoId: "Isaias",
+      secuenciaId: "aperturaPortal",
+      tecla: "E",
     }),
     []
   );
 
-  const objetosPresentes = [
-    // ... (los mismos objetos que ya tienes)
-    {
-      id: "classroom_right_side_wall",
-      categoria: "Pared",
-      x: 1250,
-      y: 1609,
-      ancho: 250,
-      alto: 934,
-      colider: { ancho: 500, alto: 890, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "pared_frontal_salon_clases",
-      categoria: "Pared",
-      x: 1000 / 2,
-      y: 300,
-      ancho: 500,
-      alto: 220,
-      colider: { ancho: 1000, alto: 300, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "pared_frontal_salon_clases_2",
-      categoria: "Pared",
-      x: 1250,
-      y: 480,
-      ancho: 250,
-      alto: 220,
-      colider: { ancho: 550, alto: 300, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "logo_sena_salon_clases",
-      categoria: "Decoration",
-      x: 172,
-      y: 280,
-      ancho: 129,
-      alto: 162,
-      imagen: AficheLogoSena,
-      colider: { ancho: 2, alto: 6, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "tablero_salon_clases",
-      categoria: "Decoration",
-      x: 480,
-      y: 280,
-      ancho: 386,
-      alto: 158,
-      imagen: Tablero,
-      colider: { ancho: 200, alto: 60, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "tablero_corcho_salon_clases",
-      categoria: "Decoration",
-      x: 835,
-      y: 280,
-      ancho: 209,
-      alto: 154,
-      imagen: tableroCorcho,
-      colider: { ancho: 200, alto: 60, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_maestro_salon_clases",
-      categoria: "Decoration",
-      x: 480,
-      y: 524,
-      ancho: 309,
-      alto: 141,
-      imagen: EscritorioMaestro,
-      colider: { ancho: 200, alto: 55, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_1_salon_clases",
-      categoria: "Decoration",
-      x: 233,
-      y: 850,
-      ancho: 180,
-      alto: 162,
-      imagen: Escritorio1,
-      colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_2_salon_clases",
-      categoria: "Decoration",
-      x: 519,
-      y: 850,
-      ancho: 180,
-      alto: 162,
-      imagen: Escritorio2,
-      colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_3_salon_clases",
-      categoria: "Decoration",
-      x: 779,
-      y: 850,
-      ancho: 180,
-      alto: 162,
-      imagen: Escritorio3,
-      colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_4_salon_clases",
-      categoria: "Decoration",
-      x: 233,
-      y: 1100,
-      ancho: 180,
-      alto: 162,
-      imagen: Escritorio4,
-      colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_5_salon_clases",
-      categoria: "Decoration",
-      x: 519,
-      y: 1100,
-      ancho: 180,
-      alto: 162,
-      imagen: Escritorio5,
-      colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-    {
-      id: "escritorio_6_salon_clases",
-      categoria: "Decoration",
-      x: 779,
-      y: 1100,
-      ancho: 180,
-      alto: 162,
-      imagen: Escritorio6,
-      colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
-      mostrarDebug: debug.activo,
-    },
-  ];
+  const objetosPresentes = useMemo(() => {
+    return [
+      {
+        id: "classroom_right_side_wall",
+        categoria: "Pared",
+        x: 1250,
+        y: 1609,
+        ancho: 250,
+        alto: 934,
+        colider: { ancho: 500, alto: 890, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "pared_frontal_salon_clases",
+        categoria: "Pared",
+        x: 1000 / 2,
+        y: 300,
+        ancho: 500,
+        alto: 220,
+        colider: { ancho: 1000, alto: 300, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "pared_frontal_salon_clases_2",
+        categoria: "Pared",
+        x: 1250,
+        y: 480,
+        ancho: 250,
+        alto: 220,
+        colider: { ancho: 550, alto: 300, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "logo_sena_salon_clases",
+        categoria: "Decoration",
+        x: 172,
+        y: 280,
+        ancho: 129,
+        alto: 162,
+        imagen: AficheLogoSena,
+        colider: { ancho: 2, alto: 6, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "tablero_salon_clases",
+        categoria: "Decoration",
+        x: 480,
+        y: 280,
+        ancho: 386,
+        alto: 158,
+        imagen: Tablero,
+        colider: { ancho: 200, alto: 60, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "tablero_corcho_salon_clases",
+        categoria: "Decoration",
+        x: 835,
+        y: 280,
+        ancho: 209,
+        alto: 154,
+        imagen: tableroCorcho,
+        colider: { ancho: 200, alto: 60, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_maestro_salon_clases",
+        categoria: "Decoration",
+        x: 480,
+        y: 524,
+        ancho: 309,
+        alto: 141,
+        imagen: EscritorioMaestro,
+        colider: { ancho: 200, alto: 55, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_1_salon_clases",
+        categoria: "Decoration",
+        x: 233,
+        y: 850,
+        ancho: 180,
+        alto: 162,
+        imagen: Escritorio1,
+        colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_2_salon_clases",
+        categoria: "Decoration",
+        x: 519,
+        y: 850,
+        ancho: 180,
+        alto: 162,
+        imagen: Escritorio2,
+        colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_3_salon_clases",
+        categoria: "Decoration",
+        x: 779,
+        y: 850,
+        ancho: 180,
+        alto: 162,
+        imagen: Escritorio3,
+        colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_4_salon_clases",
+        categoria: "Decoration",
+        x: 233,
+        y: 1100,
+        ancho: 180,
+        alto: 162,
+        imagen: Escritorio4,
+        colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_5_salon_clases",
+        categoria: "Decoration",
+        x: 519,
+        y: 1100,
+        ancho: 180,
+        alto: 162,
+        imagen: Escritorio5,
+        colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+      {
+        id: "escritorio_6_salon_clases",
+        categoria: "Decoration",
+        x: 779,
+        y: 1100,
+        ancho: 180,
+        alto: 162,
+        imagen: Escritorio6,
+        colider: { ancho: 100, alto: 85, offsetX: 0, offsetY: 0 },
+        mostrarDebug: debug.activo,
+      },
+    ];
+  }, [debug.activo]);
 
   return (
     <>
@@ -321,26 +316,13 @@ export default function PisoPrincipalSena() {
         <TrazoRuta anchoMundo={ANCHO_MUNDO} largoMundo={LARGO_MUNDO} mostrar={debug.activo} />
 
         {marca && (
-          <MarcaClick
-            key={marca.key}
-            x={marca.x}
-            y={marca.y}
-            tam={100}
-            imagen={marcaClickGif}
-            zIndex={999999}
-          />
+          <MarcaClick key={marca.key} x={marca.x} y={marca.y} tam={100} imagen={marcaClickGif} zIndex={999999} />
         )}
 
         <Jugador ancho={spriteJugador.ancho} alto={spriteJugador.alto} />
 
-        <IndicadorInteraccionIndirecta
-          imagen={IconoE}
-          tam={128}
-          altoJugador={spriteJugador.alto}
-          offsetY={-10}
-        />
+        <IndicadorInteraccionIndirecta imagen={IconoE} tam={128} altoJugador={spriteJugador.alto} offsetY={-10} />
 
-        {/* ✅ Objetos del mundo */}
         {objetosPresentes.map((objeto) => (
           <Objeto
             key={objeto.id}
@@ -356,7 +338,6 @@ export default function PisoPrincipalSena() {
           />
         ))}
 
-        {/* ✅ Personaje tutorial */}
         <PersonajeTutorial
           id="npc_tutorial_maestro_1"
           x={480}
@@ -365,8 +346,6 @@ export default function PisoPrincipalSena() {
           alto={300}
           tecla="E"
           mostrarDebug={debug.activo}
-          
-          
           npcImagen={GifIsaias}
           npcAncho={128}
           npcAlto={128}
@@ -374,57 +353,12 @@ export default function PisoPrincipalSena() {
           desviacionZonaX={0}
           desviacionZonaY={140}
           plantillaId="DIALOGO"
-          plantillaProps={{
-            dialogoId: "Isaias",
-            secuenciaId: "aperturaPortal",
-            tecla: "E",
-          }}
+          plantillaProps={plantillaPropsIsaias}
         />
 
-<Rival
-  id="RIVAL_DIRECTO_1"
-  x={820}
-  y={1330}
-  imagen={rivalCalavera}
-  imagenDerrotado={rivalCalaveraDerrorada}
-  usarIndirecta={false}
-  usarDirecta={true}   // ✅ ahora es explícita
-  dirAncho={150}
-  dirAlto={150}
-  dirMargen={50}
-  combatePlantillaId="COMBATE_RIVAL"
-  combateProps={{ rivalNombre: "calaveraDirecta" }}
-  patrullaActiva={true}
-  patrullaAncho={160}
-  patrullaAlto={120}
-  patrullaVelocidad={45}
-  mostrarDebug={debug.activo}
-/>
+       
 
-<Rival
-  id="RIVAL_E_1"
-  x={220}
-  y={1530}
-  imagen={rivalCalavera}
-  imagenDerrotado={rivalCalaveraDerrorada}
-  usarIndirecta={true}
-  tecla="E"
-  indAncho={190}
-  indAlto={220}
-  indMargen={8}
-  combatePlantillaId="COMBATE_RIVAL"
-  combateProps={{ rivalNombre: "calaveraE" }}
-  patrullaActiva={true}
-  patrullaAncho={160}
-  patrullaAlto={290}
-  patrullaVelocidad={85}
-  // patrullaSoloHorizontal={true} // (opcional) si quieres solo X
-  mostrarDebug={debug.activo}
-/>
-
-
-
-
+        
 
         <Teleport
           id="tp_salida_1"
