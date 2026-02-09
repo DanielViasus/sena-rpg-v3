@@ -3,8 +3,10 @@
 // =======================
 // JUGADOR (skins)
 // =======================
-import skinDefaultIdle from "../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
-import skinDefaultWalk from "../assets/svg/personajes/jugador/gifWalk_128x128_200ms.webp";
+import skinDefaultIdle from "../assets/svg/personajes/jugador/caballero/caballero_animado_220ms.webp";
+import skinDefaultWalk from "../assets/svg/personajes/jugador/caballero/caballero_movimiento_animado_220ms_v3.webp";
+import skinCrockIdle from "../assets/svg/personajes/jugador/gifIdle_128x128_200ms.webp";
+import skinCrockWalk from "../assets/svg/personajes/jugador/gifWalk_128x128_200ms.webp";
 
 // Ejemplo ISAIAS (ajusta a tus rutas reales si existen)
 // import skinIsaiasIdle from "../assets/svg/personajes/isaias/gifIdle_128x128_200ms.webp";
